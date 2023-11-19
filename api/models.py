@@ -11,7 +11,7 @@ class User(AbstractUser):
     created_at = models.DateTimeField(auto_now_add=True)
     is_foreign = models.BooleanField(default=False)
     host = models.CharField(max_length=50, null=True, blank=True)
-    foreign_id = models.URLField(unique=True)
+    foreign_id = models.URLField(null=True, blank=True)
     foreign_profile_image = models.URLField(null=True, blank=True)
 
 class Post(models.Model):
