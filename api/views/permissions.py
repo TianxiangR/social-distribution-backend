@@ -45,4 +45,10 @@ class IsCommentModifyPermissionOwner(BasePermission):
                 return True
         return obj.post.author == request.user or obj.user == request.user
 
+class IsServer(BasePermission):
+    message = 'You do not have access to this comment'
+    code = 'no_access_to_comment'
+    
+    def has_permission(self, request, view):
+        return request.user.is_server
 

@@ -13,12 +13,13 @@ class User(AbstractUser):
     host = models.CharField(max_length=50, null=True, blank=True)
     foreign_id = models.URLField(null=True, blank=True)
     foreign_profile_image = models.URLField(null=True, blank=True)
+    is_server = models.BooleanField(default=False)
 
 class Post(models.Model):
     id = models.UUIDField(primary_key=True, unique=True, editable=False, default=uuid.uuid4)
     title = models.CharField(max_length=50)
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
-    content = models.CharField(max_length=int(1e8), blank=True)
+    content = models.TextField(max_length=int(1e8), blank=True)
     visibility = models.CharField(max_length=50, choices=[('PUBLIC', 'PUBLIC'), ('FRIENDS', 'FRIENDS'), ('PRIVATE', 'PRIVATE')], default='PUBLIC')  
     created_at = models.DateTimeField(auto_now_add=True)
     contentType = models.CharField(max_length=50, choices=[('text/plain', 'text/plain'), ('text/markdown', 'text/markdown'), ('image', 'image')], default='text/plain')
@@ -90,3 +91,4 @@ class Inbox(models.Model):
     like_comment = models.ForeignKey(LikeComment, on_delete=models.CASCADE, related_name='inbox', null=True, blank=True)
     type = models.CharField(max_length=50, choices=[('SHARE_POST', 'SHARE_POST'), ('COMMENT', 'COMMENT'), ('FOLLOW', 'FOLLOW'), ('LIKE_POST', 'LIKE_POST'), ('LIKE_COMMENT', 'LIKE_COMMENT')])
     is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)

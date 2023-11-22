@@ -10,26 +10,29 @@ from rest_framework import status
 from drf_spectacular.utils import extend_schema
 from dateutil.parser import parse
 from ..utils import get_foreign_author_or_create
+from .permissions import IsServer
 
 
 class AuthorList(GenericAPIView):
   authentication_classes = [BasicAuthentication]
-  permission_classes = [IsAuthenticated]
+  permission_classes = [IsAuthenticated, IsServer]
   queryset = User.objects.all()
   serializer_class = AuthorSerializer
   
   def get(self, request, **kwargs):
     authors = self.get_queryset()
+    authors = authors.filter(is_server=False)
     serializer = self.get_serializer(authors, many=True, context={'request': request})
     response_body = {
       "type": "authors",
       "items": serializer.data
     }
+    
     return Response(response_body, status=status.HTTP_200_OK)
   
 class AuthorDetail(GenericAPIView):
   authentication_classes = [BasicAuthentication]
-  permission_classes = [IsAuthenticated]
+  permission_classes = [IsAuthenticated, IsServer]
   queryset = User.objects.all()
   serializer_class = AuthorSerializer
   lookup_url_kwarg = 'author_id'
@@ -37,12 +40,15 @@ class AuthorDetail(GenericAPIView):
   def get(self, request, **kwargs):
     author_id = kwargs.get('author_id')
     author = get_object_or_404(self.get_queryset(), pk=author_id)
+    if author.is_server:
+      return Response(status=status.HTTP_404_NOT_FOUND)
+    
     serializer = self.get_serializer(author, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
   
 class FollowerList(GenericAPIView):
   authentication_classes = [BasicAuthentication]
-  permission_classes = [IsAuthenticated]
+  permission_classes = [IsAuthenticated, IsServer]
   
   def get(self, request, **kwargs):
     author_id = kwargs.get('author_id')
@@ -58,7 +64,7 @@ class FollowerList(GenericAPIView):
   
 class AuthorPostList(GenericAPIView):
   authentication_classes = [BasicAuthentication]
-  permission_classes = [IsAuthenticated]
+  permission_classes = [IsAuthenticated, IsServer]
   
   def get(self, request, **kwargs):
     author_id = kwargs.get('author_id')
@@ -68,19 +74,15 @@ class AuthorPostList(GenericAPIView):
       "type": "posts",
       "items": []
     }
-    
-    for post in posts:
-      if post.visibility == 'PUBLIC' and not post.unlisted:
-        serializer = PostSerializer(post, context={'request': request})
-        response_body['items'].append(serializer.data)
-        
-    response_body['items'].sort(key=lambda x: parse(x['published']), reverse=True)
+    items = PostSerializer(posts, many=True, context={'request': request}).data
+    items.sort(key=lambda x: parse(x['published']), reverse=True)
+    response_body['items'] = items
     
     return Response(response_body, status=status.HTTP_200_OK)
   
 class AuthorPostDetail(GenericAPIView):
   authentication_classes = [BasicAuthentication]
-  permission_classes = [IsAuthenticated]
+  permission_classes = [IsAuthenticated, IsServer]
   
   def get(self, request, **kwargs):
     author_id = kwargs.get('author_id')
@@ -92,7 +94,7 @@ class AuthorPostDetail(GenericAPIView):
   
 class AuthorPostCommentList(GenericAPIView):
   authentication_classes = [BasicAuthentication]
-  permission_classes = [IsAuthenticated]
+  permission_classes = [IsAuthenticated, IsServer]
   
   def get(self, request, **kwargs):
     author_id = kwargs.get('author_id')
@@ -114,7 +116,7 @@ class AuthorPostCommentList(GenericAPIView):
   
 class AuthorInboxList(GenericAPIView):
   authentication_classes = [BasicAuthentication]
-  permission_classes = [IsAuthenticated]
+  permission_classes = [IsAuthenticated, IsServer]
   
   def get(self, request, **kwargs):
     author_id = kwargs.get('author_id')
@@ -150,7 +152,7 @@ class AuthorInboxList(GenericAPIView):
     actor_data = request_body.get('actor')
     actor = get_foreign_author_or_create(actor_data)
     target = get_object_or_404(User, pk=author_id)
-    type = request_body.get('type')
+    type = request_body.get('type')   
     
     if type == "SHARE_POST":
       post_data = request_body.get('object')
