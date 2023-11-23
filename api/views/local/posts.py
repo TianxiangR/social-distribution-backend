@@ -1,5 +1,5 @@
 import uuid
-from ..models import User, Post, LikePost, Notification
+from api.models import User, Post, LikePost, Notification
 from api.serializer import PostSerializer, LikePostSerializer, PostListItemSerializer, PostDetailSerializer
 from rest_framework.authtoken.models import Token
 from rest_framework.authentication import TokenAuthentication
@@ -8,9 +8,9 @@ from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView, get_object_or_404
 from rest_framework import status
 from drf_spectacular.utils import extend_schema
-from ..utils import get_visible_posts, update_access_permission
-from .permissions import IsPostOwnerOrReadOnly, IsPostModifyPermissionOwner
-from ..server_adapters.my_site_adapter import MySiteAdapter
+from api.utils import get_visible_posts, update_access_permission
+from api.permissions import IsPostOwnerOrReadOnly, IsPostModifyPermissionOwner
+from api.server_adapters.my_site_adapter import MySiteAdapter
 
 # TO-DO: add auth tokens to all endpoints from login
 

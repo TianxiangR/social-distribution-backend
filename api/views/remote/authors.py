@@ -1,5 +1,5 @@
-from ..models import User, Post, Comment
-from ..serializers.cross_site_serializers import AuthorSerializer, PostSerializer, CommentSerializer, InboxSerializer
+from api.models import User, Post, Comment
+from api.serializers.cross_site_serializers import AuthorSerializer, PostSerializer, CommentSerializer, InboxSerializer
 from api.serializer import LikePostSerializer, LikeCommentSerializer, FollowSerializer, CommentSerializer
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
@@ -7,8 +7,9 @@ from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView,get_object_or_404
 from rest_framework import status
 from dateutil.parser import parse
-from ..utils import get_foreign_author_or_create
-from .permissions import IsServer
+from api.utils import get_foreign_author_or_create, clip_id_from_url
+from api.permissions import IsServer
+from ...server_adapters.my_site_adapter import MySiteAdapter
 
 
 class AuthorList(GenericAPIView):
@@ -51,14 +52,26 @@ class FollowerList(GenericAPIView):
   def get(self, request, **kwargs):
     author_id = kwargs.get('author_id')
     author = get_object_or_404(User, pk=author_id)
-    follower_relation = author.follower_relations.all()
-    followers = [relation.follower for relation in follower_relation]
-    serializer = AuthorSerializer(followers, many=True, context={'request': request})
+    local_followings = author.following_relations.all()
+    foreign_followings = author.foreign_following_relations.all()
+    local_users = [following.following for following in local_followings]
+    base_data = AuthorSerializer(local_users, many=True, context={'request': request}).data
+    
+    adapter = MySiteAdapter()
+    for following in foreign_followings:
+      id = clip_id_from_url(following.following)
+      resp = adapter.request_get_author_detail(id)
+      if resp['status_code'] == 200:
+        base_data.append(resp['data'])
+    
     response_body = {
       "type": "followers",
-      "items": serializer.data
+      "items": base_data
     }
+    print("reached here")
+    
     return Response(response_body, status=status.HTTP_200_OK)
+    
   
 class AuthorPostList(GenericAPIView):
   authentication_classes = [BasicAuthentication]

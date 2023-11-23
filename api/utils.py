@@ -88,3 +88,9 @@ def get_foreign_author_or_create(author):
     author.save()
   return author
     
+    
+def clip_id_from_url(url):
+  tokens = url.split('/')
+  if len(tokens) == 0:
+    return '-1'
+  return tokens[-1]

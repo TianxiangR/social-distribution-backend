@@ -1,4 +1,4 @@
-from ..models import Notification
+from api.models import Notification
 from api.serializer import NotificationDetailSerializer, NotificationSerializer
 from rest_framework.authtoken.models import Token
 from rest_framework.authentication import TokenAuthentication

@@ -38,7 +38,7 @@ class FollowForeign(models.Model):
     """
         This model is used to store the relationship between a local user and a foreign user.
     """
-    follower = models.ForeignKey(User, on_delete=models.CASCADE, related_name='following_foreign_relations')
+    follower = models.ForeignKey(User, on_delete=models.CASCADE, related_name='foreign_following_relations')
     following = models.URLField()
     created_at = models.DateTimeField(auto_now_add=True)
     

@@ -1,5 +1,5 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
-from ..utils import has_access_to_post
+from api.utils import has_access_to_post
 
 class IsPostOwnerOrReadOnly(BasePermission):
     message = 'You do not have access to this post'

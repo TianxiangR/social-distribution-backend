@@ -1,4 +1,4 @@
-from ..models import User, Follow
+from api.models import User, Follow
 from api.serializer import FollowSerializer, UserInfoSerializer
 from rest_framework.authtoken.models import Token
 from rest_framework.authentication import TokenAuthentication

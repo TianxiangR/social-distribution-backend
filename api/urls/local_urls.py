@@ -1,7 +1,6 @@
-from django.contrib import admin
 from django.urls import path
 
-from ..views import follows, users, posts, comments, notifications, cross_site
+from ..views.local import follows, users, comments, posts, notifications
 
 urlpatterns = [
     # insite apis

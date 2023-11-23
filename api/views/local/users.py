@@ -1,5 +1,5 @@
 from django.contrib.auth import authenticate
-from ..models import User, LikePost
+from api.models import User, LikePost
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
 from api.serializer import LikePostSerializer, UserSerializer, UserInfoSerializer, AuthorSerializer
@@ -10,7 +10,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from ..server_adapters.my_site_adapter import MySiteAdapter
+from api.server_adapters.my_site_adapter import MySiteAdapter
 
 # Create your views here.
 

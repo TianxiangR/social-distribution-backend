@@ -1,6 +1,7 @@
 import requests
 from .io_adapters.base_io_adapter import BaseIOAdapter
 import os
+import json
 
 class BaseServerAdapter():
   host = None
@@ -82,7 +83,10 @@ class BaseServerAdapter():
     resp = requests.get(url, auth=(self.username, self.password))
     response = {}
     response['status_code'] = resp.status_code
-    resp_data = self.get_author_detail_request_adapter.outputTransformer(resp.json())
+    try:
+      resp_data = self.get_author_detail_request_adapter.outputTransformer(resp.json())
+    except json.decoder.JSONDecodeError:
+      resp_data = None
     response['body'] = resp_data
     return response
   
@@ -110,7 +114,7 @@ class BaseServerAdapter():
     response = {}
     response['status_code'] = resp.status_code
     resp_data = self.get_author_posts_request_adapter.outputTransformer(resp.json())
-    response['body'] = resp_data
+    response['body'] = resp_data.get('items', [])
     return response
   
   def request_get_author_post_detail(self, author_id, post_id):

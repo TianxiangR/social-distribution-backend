@@ -1,4 +1,4 @@
-from ..models import Comment, Post, LikeComment, Notification
+from api.models import Comment, Post, LikeComment, Notification
 from api.serializer import CommentSerializer, LikeCommentSerializer,CommentDetailSerializer
 from rest_framework.authtoken.models import Token
 from rest_framework.authentication import TokenAuthentication
@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView, get_object_or_404
 from rest_framework import status
 from drf_spectacular.utils import extend_schema
-from .permissions import IsPostModifyPermissionOwner, IsCommentOwnerOrReadOnly, IsCommentModifyPermissionOwner
+from api.permissions import IsPostModifyPermissionOwner, IsCommentOwnerOrReadOnly, IsCommentModifyPermissionOwner
 
 
 # TO-DO: add auth tokens to all endpoints from login
