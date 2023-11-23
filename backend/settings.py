@@ -97,8 +97,8 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 AUTH_USER_MODEL = 'api.User'
 
 
-Database
-https://docs.djangoproject.com/en/3.1/ref/settings/#databases
+# Database
+# https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
 if os.getenv('DB_PASSWORD', None):
     print("Using postgresql")
