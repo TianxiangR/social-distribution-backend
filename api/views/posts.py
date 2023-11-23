@@ -1,6 +1,6 @@
 import uuid
 from ..models import User, Post, LikePost, Notification
-from ..serializers.insite_serializers import PostSerializer, LikePostSerializer, PostListItemSerializer, PostDetailSerializer
+from api.serializer import PostSerializer, LikePostSerializer, PostListItemSerializer, PostDetailSerializer
 from rest_framework.authtoken.models import Token
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
@@ -8,8 +8,9 @@ from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView, get_object_or_404
 from rest_framework import status
 from drf_spectacular.utils import extend_schema
-from ..utils import get_friends, get_visible_posts, update_access_permission, create_access_permission
+from ..utils import get_visible_posts, update_access_permission
 from .permissions import IsPostOwnerOrReadOnly, IsPostModifyPermissionOwner
+from ..server_adapters.my_site_adapter import MySiteAdapter
 
 # TO-DO: add auth tokens to all endpoints from login
 
@@ -25,8 +26,25 @@ class PostList(GenericAPIView):
     def get(self, request, **kwargs):
         user = Token.objects.get(key=request.auth).user
         posts = get_visible_posts(user)
-        serializer = PostListItemSerializer(posts, many=True, context={'request': request})
-        return Response(serializer.data)
+        serializer = PostDetailSerializer(posts, many=True, context={'request': request})
+        post_list = serializer.data
+        
+        adapter = MySiteAdapter()
+        foriegn_authors = []
+        foriegn_posts = []
+        
+        resp = adapter.request_get_author_list()
+        if resp['status_code'] == 200:
+            foriegn_authors = resp['body']
+            
+        for author in foriegn_authors:
+            author_id = author['id'].split('/')[-1]
+            resp = adapter.request_get_author_posts(author_id)
+            if resp['status_code'] == 200:
+                foriegn_posts.extend(resp['body'])
+                
+        return Response(post_list + foriegn_posts, status=status.HTTP_200_OK)
+        
     
     @extend_schema(
         request=PostSerializer,

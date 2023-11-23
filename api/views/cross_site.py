@@ -1,13 +1,11 @@
-from ..models import User, Follow, Post, Comment
+from ..models import User, Post, Comment
 from ..serializers.cross_site_serializers import AuthorSerializer, PostSerializer, CommentSerializer, InboxSerializer
-from ..serializers.insite_serializers import LikePostSerializer, LikeCommentSerializer, FollowSerializer, PostAccessPermissionSerializer, CommentSerializer
-from rest_framework.authtoken.models import Token
+from api.serializer import LikePostSerializer, LikeCommentSerializer, FollowSerializer, CommentSerializer
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView,get_object_or_404
 from rest_framework import status
-from drf_spectacular.utils import extend_schema
 from dateutil.parser import parse
 from ..utils import get_foreign_author_or_create
 from .permissions import IsServer
@@ -21,7 +19,7 @@ class AuthorList(GenericAPIView):
   
   def get(self, request, **kwargs):
     authors = self.get_queryset()
-    authors = authors.filter(is_server=False)
+    authors = authors.filter(is_server=False, is_superuser=False)
     serializer = self.get_serializer(authors, many=True, context={'request': request})
     response_body = {
       "type": "authors",
@@ -68,8 +66,10 @@ class AuthorPostList(GenericAPIView):
   
   def get(self, request, **kwargs):
     author_id = kwargs.get('author_id')
+    print(author_id)
     author = get_object_or_404(User, pk=author_id)
     posts = author.posts.all()
+    print(len(posts))
     response_body = {
       "type": "posts",
       "items": []

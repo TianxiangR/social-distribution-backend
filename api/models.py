@@ -9,10 +9,6 @@ class User(AbstractUser):
     id = models.UUIDField(primary_key=True, unique=True, editable=False, default=uuid.uuid4)
     profile_image = models.ImageField(upload_to=MEDIA_URL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    is_foreign = models.BooleanField(default=False)
-    host = models.CharField(max_length=50, null=True, blank=True)
-    foreign_id = models.URLField(null=True, blank=True)
-    foreign_profile_image = models.URLField(null=True, blank=True)
     is_server = models.BooleanField(default=False)
 
 class Post(models.Model):
@@ -28,20 +24,47 @@ class Post(models.Model):
     unlisted = models.BooleanField(default=False)
 
 class Follow(models.Model):
+    """
+        This model is used to store the relationship between two local users.
+    """
     follower = models.ForeignKey(User, on_delete=models.CASCADE, related_name='following_relations')
     following = models.ForeignKey(User, on_delete=models.CASCADE, related_name='follower_relations')
     created_at = models.DateTimeField(auto_now_add=True)
     
-    # Define two fields "unique" as couple
-    # source: https://stackoverflow.com/questions/54806874/django-unique-together-with-foreign-keys
+    class Meta:
+        unique_together = ('follower', 'following')
+        
+class FollowForeign(models.Model):
+    """
+        This model is used to store the relationship between a local user and a foreign user.
+    """
+    follower = models.ForeignKey(User, on_delete=models.CASCADE, related_name='following_foreign_relations')
+    following = models.URLField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    
     class Meta:
         unique_together = ('follower', 'following')
     
 class PostAccessPermission(models.Model):
+    """
+        This model is used to store the relationship between a local user and a local post.
+    """
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='post_access_permissions')
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='post_access_permissions')
     author_follow_relation = models.ForeignKey(Follow, on_delete=models.CASCADE, related_name='granted_post_access_permissions')
     target_follow_relation = models.ForeignKey(Follow, on_delete=models.CASCADE, related_name='receceived_post_access_permissions')
+    
+    class Meta:
+        unique_together = ('user', 'post')
+
+class PostAccessPermissionForeign(models.Model):
+    """
+        This model is used to store the relationship between a local user and a foreign post.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='post_access_permissions_foreign')
+    post = models.URLField()
+    author_follow_relation = models.ForeignKey(FollowForeign, on_delete=models.CASCADE, related_name='granted_post_access_permissions_foreign')
+    target_follow_relation = models.ForeignKey(FollowForeign, on_delete=models.CASCADE, related_name='receceived_post_access_permissions_foreign')
     
     class Meta:
         unique_together = ('user', 'post')
@@ -82,10 +105,10 @@ class Notification(models.Model):
 
 class Inbox(models.Model):
     id = models.UUIDField(primary_key=True, unique=True, editable=False, default=uuid.uuid4)
-    actor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='inbox_as_actor')
-    target = models.ForeignKey(User, on_delete=models.CASCADE, related_name='inbox_as_target')
-    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='inbox', null=True, blank=True)
-    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='inbox', null=True, blank=True)
+    actor = models.URLField()
+    target = models.ForeignKey(User, on_delete=models.CASCADE, related_name='inbox')
+    post = models.URLField()
+    comment = models.URLField()
     follow = models.ForeignKey(Follow, on_delete=models.CASCADE, related_name='inbox', null=True, blank=True)
     like_post = models.ForeignKey(LikePost, on_delete=models.CASCADE, related_name='inbox', null=True, blank=True)
     like_comment = models.ForeignKey(LikeComment, on_delete=models.CASCADE, related_name='inbox', null=True, blank=True)

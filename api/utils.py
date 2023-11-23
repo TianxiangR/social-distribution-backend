@@ -33,7 +33,7 @@ def get_visible_posts(user):
       access_permission_post = access_permission.post
       posts.add(access_permission_post)
       
-  return posts
+  return posts  
 
 
 def has_access_to_post(user, post):

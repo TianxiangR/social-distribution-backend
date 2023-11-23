@@ -1,11 +1,11 @@
 from rest_framework import serializers
-from ..models import User, Post, Comment, LikePost, LikeComment, Follow, PostAccessPermission, Notification
-from ..utils import has_access_to_comment
+from api.models import User, Post, Comment, LikePost, LikeComment, Follow, PostAccessPermission, Notification
+from api.utils import has_access_to_comment
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'username', 'email', 'profile_image', 'created_at']
+        fields = ['id', 'username', 'profile_image', 'created_at']
     
     # correct way to hash password: https://stackoverflow.com/questions/49189484/how-to-mention-password-field-in-serializer
     def create(self, validated_data):
@@ -29,7 +29,7 @@ class UserInfoSerializer(UserSerializer):
     
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'username', 'email', 'profile_image', 'created_at', 'is_following']
+        fields = ['id','username', 'profile_image', 'created_at', 'is_following']
     
     def get_profile_image(self, obj):
         request = self.context.get('request')
@@ -45,6 +45,8 @@ class UserInfoSerializer(UserSerializer):
         if user:
             return obj.follower_relations.filter(follower=user).exists()
         return False
+
+
         
 class PostSerializer(serializers.ModelSerializer):
     class Meta:
@@ -254,3 +256,76 @@ class NotificationDetailSerializer(serializers.ModelSerializer):
             return None
         
         return obj.comment.content
+
+
+class AuthorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'type', 'url', 'host', 'displayName', 'profileImage']
+
+    type = serializers.SerializerMethodField()
+    url = serializers.SerializerMethodField()
+    host = serializers.SerializerMethodField()
+    displayName = serializers.SerializerMethodField()
+    profileImage = serializers.SerializerMethodField()
+    id = serializers.SerializerMethodField()
+
+    def get_id(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(str(obj.id))
+
+    def get_type(self, obj):
+        return 'author'
+
+    def get_url(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(str(obj.id))
+
+    def get_host(self, obj):
+        request = self.context.get('request')
+        return 'http://' + request.get_host() + '/'
+
+    def get_displayName(self, obj):
+        return obj.username
+
+    def get_profileImage(self, obj):
+        request = self.context.get('request')
+        if obj.profile_image:
+            img_url = obj.profile_image.url
+        else:
+            return None
+        return request.build_absolute_uri(img_url)
+    
+class PostDetailSerializer(serializers.ModelSerializer):
+  comments = serializers.SerializerMethodField()
+  count = serializers.SerializerMethodField()
+  author = AuthorSerializer()
+  published = serializers.SerializerMethodField()
+  id = serializers.SerializerMethodField()
+  description = serializers.SerializerMethodField()
+  
+  class Meta:
+    model = Post
+    fields = ['id', 'title', 'source', 'origin', 'description', 'contentType', 'content', 'author', 'count', 'comments', 'published', 'visibility', 'unlisted', 'source', 'origin']
+
+  
+  def get_id(self, obj):
+    request = self.context.get('request')
+    return obj.origin
+
+  
+  def get_comments(self, obj):
+    return str(obj.origin) + '/comments'
+
+  
+  def get_count(self, obj):
+    return obj.comments.count()
+
+  
+  def get_published(self, obj):
+    # iso 8601 timestamp
+    return obj.created_at.isoformat()
+
+  
+  def get_description(self, obj):
+    return "There is no description for this post."

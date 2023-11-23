@@ -1,5 +1,5 @@
 from ..models import Comment, Post, LikeComment, Notification
-from ..serializers.insite_serializers import CommentSerializer, LikeCommentSerializer,CommentDetailSerializer
+from api.serializer import CommentSerializer, LikeCommentSerializer,CommentDetailSerializer
 from rest_framework.authtoken.models import Token
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated

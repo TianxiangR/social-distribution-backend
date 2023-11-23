@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate
 from ..models import User, LikePost
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
-from ..serializers.insite_serializers import LikePostSerializer, UserSerializer, UserInfoSerializer
+from api.serializer import LikePostSerializer, UserSerializer, UserInfoSerializer, AuthorSerializer
 from rest_framework.authtoken.models import Token
 from drf_spectacular.utils import extend_schema
 from rest_framework.generics import GenericAPIView
@@ -10,6 +10,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from ..server_adapters.my_site_adapter import MySiteAdapter
 
 # Create your views here.
 
@@ -27,30 +28,31 @@ def signup(request):
             return JsonResponse({'message': 'Signup successful'}, status=200)
         else:
             return JsonResponse(serializer.errors, status=400)
-        
+
+
 @extend_schema(
     responses={200: UserSerializer(many=True), 404: None}
 )
-
 class UserList(GenericAPIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
     queryset = User.objects.all()
-    serializer_class = UserSerializer
+    serializer_class = AuthorSerializer
     
     def get(self, request, **kwargs):
-        users = User.objects.all()
-        serializer = UserInfoSerializer(users, many=True, context={'request': request})
+        users = self.get_queryset().filter(is_server=False, is_superuser=False).exclude(id=request.user.id)
+        serializer = self.get_serializer(users, many=True)
+        adapter = MySiteAdapter()
+        response = adapter.request_get_author_list()
         
-        returned_users = []
-        # remove current user from list
-        for user in serializer.data:
-            # turn uuid into string for comparison
-            if str(user['id']) != str(request.user.id):
-                returned_users.append(user)
-                
-        return Response(returned_users, status=status.HTTP_200_OK)
-    
+        user_list = serializer.data
+        
+        if response['status_code'] == 200:
+            user_list.extend(response['body'])
+            
+        return  Response(user_list, status=status.HTTP_200_OK)
+
+
 class UserDetail(GenericAPIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
@@ -76,7 +78,8 @@ class UserDetail(GenericAPIView):
         user = self.get_object()
         user.delete()
         return JsonResponse({'message': 'User deleted successfully'}, status=200)
-        
+
+
 @api_view(['POST'])
 def update_password(request, pk):
     if request.method == "POST":
@@ -87,6 +90,7 @@ def update_password(request, pk):
             return JsonResponse({'message': 'Password updated successfully'}, status=200)
         except User.DoesNotExist:
             return JsonResponse({'message': 'User does not exist'}, status=404)
+
 
 @extend_schema(
     request=dict,
