@@ -12,4 +12,5 @@ urlpatterns = [
     path('authors/<uuid:author_id>/posts/<uuid:post_id>', cross_site.AuthorPostDetail.as_view(), name='author_post_detail'),
     path('authors/<uuid:author_id>/posts/<uuid:post_id>/comments', cross_site.AuthorPostCommentList.as_view(), name='author_post_comments'),
     path('authors/<uuid:author_id>/posts/<uuid:post_id>/inbox', cross_site.AuthorInboxList.as_view(), name='author_post_inbox'),
+    path('authors/<uuid:author_id>/followers/<uuid:foreign_author_id>', cross_site.AuthorInteractionForeignAuthor.as_view() , name='author_interaction_foreign_author')
 ]

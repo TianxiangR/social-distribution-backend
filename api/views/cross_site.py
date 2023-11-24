@@ -2,7 +2,7 @@ from ..models import User, Follow, Post, Comment
 from ..serializers.cross_site_serializers import AuthorSerializer, PostSerializer, CommentSerializer, InboxSerializer
 from ..serializers.insite_serializers import LikePostSerializer, LikeCommentSerializer, FollowSerializer, PostAccessPermissionSerializer, CommentSerializer
 from rest_framework.authtoken.models import Token
-from rest_framework.authentication import BasicAuthentication
+from rest_framework.authentication import BasicAuthentication, TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView,get_object_or_404
@@ -89,6 +89,51 @@ class AuthorPostDetail(GenericAPIView):
     post = get_object_or_404(author.posts.all(), pk=post_id)
     serializer = PostSerializer(post, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
+  
+class AuthorInteractionForeignAuthor(GenericAPIView):
+  authentication_classes = [BasicAuthentication]
+  permission_classes = [IsAuthenticated]
+  
+  def get(self, request, **kwargs):
+    author_id = kwargs.get('author_id')
+    author = get_object_or_404(User, pk=author_id)
+    follower_relation = author.follower_relations.all()
+    followers = [relation.follower.id for relation in follower_relation]
+    foreign_author_id = kwargs.get('foreign_author_id')
+    response_body = {
+      "is_following": foreign_author_id in followers,
+    }
+    return Response(response_body, status=status.HTTP_200_OK)
+  
+  def put(self, request, **kwargs):
+    author_id = kwargs.get('author_id')
+    author = get_object_or_404(User, pk=author_id)
+    follower_relation = author.follower_relations.all()
+    followers = [relation.follower.id for relation in follower_relation]
+    foreign_author_id = kwargs.get('foreign_author_id')
+    if foreign_author_id in followers:
+      return Response(status=status.HTTP_400_BAD_REQUEST)
+    else:
+      serializer = FollowSerializer(data={'follower': foreign_author_id, 'following': author_id})
+      if serializer.is_valid():
+        serializer.save()
+        return Response(status=status.HTTP_200_OK)
+      else:
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+      
+  def delete(self, request, **kwargs):
+    author_id = kwargs.get('author_id')
+    author = get_object_or_404(User, pk=author_id)
+    follower_relation = author.follower_relations.all()
+    followers = [relation.follower.id for relation in follower_relation]
+    foreign_author_id = kwargs.get('foreign_author_id')
+    foreign_author = get_object_or_404(User, pk=foreign_author_id)
+    if foreign_author_id in followers:
+      follow = get_object_or_404(Follow, follower=foreign_author, following=author)
+      follow.delete()
+      return Response(status=status.HTTP_200_OK)
+    else:
+      return Response(status=status.HTTP_400_BAD_REQUEST)
   
 class AuthorPostCommentList(GenericAPIView):
   authentication_classes = [BasicAuthentication]
