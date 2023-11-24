@@ -7,19 +7,37 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView,get_object_or_404
 from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
 from drf_spectacular.utils import extend_schema
 from dateutil.parser import parse
 from ..utils import get_foreign_author_or_create
 
+class Pagination(PageNumberPagination):
+  page_size = 10
+  page_size_query_param = 'size'
+  max_page_size = 100
+
+  def get_page_size(self, request):
+    page_size = request.query_params.get(self.page_size_query_param)
+
+    return int(page_size) if page_size else self.page_size
 
 class AuthorList(GenericAPIView):
   authentication_classes = [BasicAuthentication]
   permission_classes = [IsAuthenticated]
-  queryset = User.objects.all()
+  pagination_class = Pagination
+  queryset = User.objects.all().order_by('username')
   serializer_class = AuthorSerializer
   
   def get(self, request, **kwargs):
     authors = self.get_queryset()
+    page = self.paginate_queryset(authors)
+    if page is not None:
+      serializer = self.get_serializer(page, many=True, context={'request': request})
+      return self.get_paginated_response({
+      "type": "authors",
+      "items": serializer.data
+    })
     serializer = self.get_serializer(authors, many=True, context={'request': request})
     response_body = {
       "type": "authors",
@@ -59,22 +77,24 @@ class FollowerList(GenericAPIView):
 class AuthorPostList(GenericAPIView):
   authentication_classes = [BasicAuthentication]
   permission_classes = [IsAuthenticated]
+  pagination_class = Pagination
   
   def get(self, request, **kwargs):
     author_id = kwargs.get('author_id')
     author = get_object_or_404(User, pk=author_id)
-    posts = author.posts.all()
+    posts = author.posts.all().order_by('-created_at').filter(visibility='PUBLIC').filter(unlisted=False)
+    page = self.paginate_queryset(posts)
+    if page is not None:
+      serializer = PostSerializer(page, many=True, context={'request': request})
+      return self.get_paginated_response({
+      "type": "posts",
+      "items": serializer.data
+    })
+    serializer = PostSerializer(posts, many=True, context={'request': request})
     response_body = {
       "type": "posts",
-      "items": []
-    }
-    
-    for post in posts:
-      if post.visibility == 'PUBLIC' and not post.unlisted:
-        serializer = PostSerializer(post, context={'request': request})
-        response_body['items'].append(serializer.data)
-        
-    response_body['items'].sort(key=lambda x: parse(x['published']), reverse=True)
+      "items": serializer.data
+    }   
     
     return Response(response_body, status=status.HTTP_200_OK)
   
@@ -93,13 +113,23 @@ class AuthorPostDetail(GenericAPIView):
 class AuthorPostCommentList(GenericAPIView):
   authentication_classes = [BasicAuthentication]
   permission_classes = [IsAuthenticated]
+  pagination_class = Pagination
   
   def get(self, request, **kwargs):
     author_id = kwargs.get('author_id')
     post_id = kwargs.get('post_id')
     author = get_object_or_404(User, pk=author_id)
     post = get_object_or_404(author.posts.all(), pk=post_id)
-    comment = post.comments.all()
+    comment = post.comments.all().order_by('-created_at')
+    page = self.paginate_queryset(comment)
+    if page is not None:
+      serializer = CommentSerializer(page, many=True, context={'request': request})
+      return self.get_paginated_response({
+      "type": "comments",
+      "items": serializer.data,
+      "post": str(post.origin),
+      "id": str(post.origin) + '/comments',
+    })
     serializer = CommentSerializer(comment, many=True, context={'request': request})
     response_body = {
       "type": "comments",
@@ -107,8 +137,6 @@ class AuthorPostCommentList(GenericAPIView):
       "post": str(post.origin),
       "id": str(post.origin) + '/comments',
     }
-    
-    response_body['comments'].sort(key=lambda x: parse(x['published']), reverse=True)
     
     return Response(response_body, status=status.HTTP_200_OK)
   
