@@ -2,7 +2,7 @@ from ..models import User, Follow, Post, Comment
 from ..serializers.cross_site_serializers import AuthorSerializer, PostSerializer, CommentSerializer, InboxSerializer
 from ..serializers.insite_serializers import LikePostSerializer, LikeCommentSerializer, FollowSerializer, PostAccessPermissionSerializer, CommentSerializer
 from rest_framework.authtoken.models import Token
-from rest_framework.authentication import TokenAuthentication, BasicAuthentication
+from rest_framework.authentication import BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView,get_object_or_404
@@ -23,7 +23,7 @@ class Pagination(PageNumberPagination):
     return int(page_size) if page_size else self.page_size
 
 class AuthorList(GenericAPIView):
-  authentication_classes = [TokenAuthentication]
+  authentication_classes = [BasicAuthentication]
   permission_classes = [IsAuthenticated]
   pagination_class = Pagination
   queryset = User.objects.all().order_by('username')
@@ -75,7 +75,7 @@ class FollowerList(GenericAPIView):
     return Response(response_body, status=status.HTTP_200_OK)
   
 class AuthorPostList(GenericAPIView):
-  authentication_classes = [TokenAuthentication]
+  authentication_classes = [BasicAuthentication]
   permission_classes = [IsAuthenticated]
   pagination_class = Pagination
   
@@ -99,7 +99,7 @@ class AuthorPostList(GenericAPIView):
     return Response(response_body, status=status.HTTP_200_OK)
   
 class AuthorPostDetail(GenericAPIView):
-  authentication_classes = [TokenAuthentication]
+  authentication_classes = [BasicAuthentication]
   permission_classes = [IsAuthenticated]
   
   def get(self, request, **kwargs):
