@@ -105,10 +105,10 @@ if os.getenv('DB_PASSWORD', None):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql_psycopg2',
-            'NAME': 'd2ujniac4banhk',
-            'USER': 'eworqyeseybmwt',
-            'PASSWORD': os.getenv('DB_PASSWORD'),
-            'HOST': 'ec2-44-213-228-107.compute-1.amazonaws.com',
+            'NAME': 'dbee9cvinq8iq6',
+            'USER': 'ecdyzgwmsrouwj',
+            'PASSWORD': '0f7e49fa395312f3c1e5489cde534780b3f5f13ef59865f0aacbad7310b08e7a',
+            'HOST': 'ec2-44-193-237-184.compute-1.amazonaws.com',
             'PORT': '5432',
         }
     }
