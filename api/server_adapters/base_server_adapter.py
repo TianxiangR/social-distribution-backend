@@ -25,6 +25,7 @@ class BaseServerAdapter():
   post_author_post_like_request_adapter = BaseIOAdapter()
   post_author_post_comment_like_request_adapter = BaseIOAdapter()
   post_author_inbox_request_adapter = BaseIOAdapter()
+  post_detail_request_adapter = BaseIOAdapter()
   
   def __init__(self):
     self.password = os.environ.get(self.password_env)
@@ -68,6 +69,9 @@ class BaseServerAdapter():
   
   def get_author_inbox_url(self, author_id):
     return self.base_url + 'authors/' + str(author_id) + '/inbox'
+  
+  def get_post_detail_url(self, post_id):
+    return self.base_url + 'posts/' + str(post_id)
   
   def request_get_author_list(self):
     url = self.get_author_list_url()
@@ -216,4 +220,18 @@ class BaseServerAdapter():
     resp = requests.post(url, auth=(self.username, self.password))
     response = {}
     response['status_code'] = resp.status_code
+    return response
+  
+  def request_post_detail(self, post_id):
+    url = self.get_post_detail_url(post_id)
+    resp = requests.get(url, auth=(self.username, self.password))
+    response = {}
+    response['status_code'] = resp.status_code
+    response['body'] = None
+    try:
+      resp_data = self.post_detail_request_adapter.outputTransformer(resp.json())
+      response['body'] = resp_data
+    except json.decoder.JSONDecodeError:
+      pass
+      
     return response

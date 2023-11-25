@@ -1,15 +1,14 @@
 from django.urls import path
 
-from ..views.remote import authors
+from ..views import authors, posts, comments, followers
 
 urlpatterns = [
     # cross site apis
-    path('authors/', authors.AuthorList.as_view(), name='authors'),
-    path('authors/<uuid:author_id>/', authors.AuthorDetail.as_view(), name='author_detail'),
-    path('authors/<uuid:author_id>/followers', authors.AuthorFollowList.as_view(), name='author_followers'),
-    path('authors/<uuid:author_id>/followers/<str:foreign_author_id>', authors.AuthorFollowDetail.as_view(), name='author_follow_detail'),
-    path('authors/<uuid:author_id>/posts/', authors.AuthorPostList.as_view(), name='author_posts'),
-    path('authors/<uuid:author_id>/posts/<uuid:post_id>', authors.AuthorPostDetail.as_view(), name='author_post_detail'),
-    path('authors/<uuid:author_id>/posts/<uuid:post_id>/comments', authors.AuthorPostCommentList.as_view(), name='author_post_comments'),
-    path('authors/<uuid:author_id>/inbox', authors.AuthorInboxList.as_view(), name='author_post_inbox'),
+    path('authors/', authors.AuthorListRemote.as_view() , name='author-list'),
+    path('authors/<uuid:author_id>/', authors.AuthorDetail.as_view(), name='author-detail'),
+    path('authors/<uuid:author_id>/posts/', posts.PostListRemote.as_view(), name='post-list'),
+    path('authors/<uuid:author_id>/posts/<uuid:post_id>/', posts.PostDetailRemote.as_view(), name='post-detail'),
+    path('authors/<uuid:author_id>/posts/<uuid:post_id>/comments', comments.CommentListRemote.as_view(), name='comment-list'),
+    path('authors/<uuid:author_id>/posts/<uuid:post_id>/comments/<uuid:comment_id>', comments.CommentDetailRemote.as_view(), name='comment-detail'),
+    path('authors/<uuid:author_id>/followers', followers.FollowerListRemote.as_view(), name='follower-list'),
 ]

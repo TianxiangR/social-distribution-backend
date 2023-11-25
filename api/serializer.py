@@ -1,267 +1,58 @@
 from rest_framework import serializers
-from api.models import User, Post, Comment, LikePost, LikeComment, Follow, PostAccessPermission, Notification, Inbox
-from api.utils import has_access_to_comment
-
-# class UserSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = User
-#         fields = ['id', 'username', 'profile_image', 'created_at']
-    
-#     # correct way to hash password: https://stackoverflow.com/questions/49189484/how-to-mention-password-field-in-serializer
-#     def create(self, validated_data):
-#         user = super().create(validated_data)
-#         user.set_password(self.initial_data['password'])
-#         user.save()
-#         return user
-    
-#     def update(self, instance, validated_data):
-#         user = super().update(instance, validated_data)
-#         try:
-#             user.set_password(self.initial_data['password'])
-#             user.save()
-#         except KeyError:
-#             pass
-#         return user
-    
-# class UserInfoSerializer(UserSerializer):
-#     profile_image = serializers.SerializerMethodField()
-#     is_following = serializers.SerializerMethodField()
-    
-#     class Meta:
-#         model = User
-#         fields = ['id','username', 'profile_image', 'created_at', 'is_following']
-    
-#     def get_profile_image(self, obj):
-#         request = self.context.get('request')
-#         try:
-#             img_url = obj.profile_image.url
-#             return request.build_absolute_uri(img_url)
-#         except ValueError:
-#             return None
-        
-#     def get_is_following(self, obj):
-#         request = self.context.get('request')
-#         user = request.user
-#         if user:
-#             return obj.follower_relations.filter(follower=user).exists()
-#         return False
+from api.models import User, Post, Comment, LikePost, LikeComment, Follower, InboxItem, FriendRequest
 
 
-        
-# class PostSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Post
-#         fields = '__all__'
-        
-# class PostListItemSerializer(PostSerializer):
-#     like_count = serializers.SerializerMethodField()
-#     comment_count = serializers.SerializerMethodField()
-#     author_profile_image = serializers.SerializerMethodField()
-#     author_name = serializers.SerializerMethodField()
-#     is_liked = serializers.SerializerMethodField()
-#     is_my_post = serializers.SerializerMethodField()
-#     allowed_users = serializers.SerializerMethodField()
-    
-#     def get_like_count(self, obj) -> int:
-#         return obj.likes.count()
-    
-#     def get_comment_count(self, obj) -> int:
-#         counter = 0
-#         request = self.context.get('request')
-#         for comment in obj.comments.all():
-#             if has_access_to_comment(request.user, comment):
-#                 counter += 1
-#         return counter
-        
-#     def get_author_profile_image(self, obj) -> str:
-#         request = self.context.get('request')
-#         try:
-#             img_url = obj.author.profile_image.url
-            
-#             if not img_url:
-#                 return None
-            
-#             # source: https://stackoverflow.com/questions/35522768/django-serializer-imagefield-to-get-full-url
-#             return request.build_absolute_uri(img_url)
-#         except ValueError:
-#             return None
-        
-#     def get_author_name(self, obj) -> str:
-#         return obj.author.username
-    
-#     def get_is_liked(self, obj) -> bool:
-#         request = self.context.get('request')
-#         user = request.user
-#         if user:
-#             return obj.likes.filter(user=user).exists()
-#         return False
-    
-#     def get_is_my_post(self, obj) -> bool:
-#         request = self.context.get('request')
-#         user = request.user
-#         if user:
-#             return obj.author == user
-#         return False
-    
-#     def get_allowed_users(self, obj) -> list[str]:
-#         request = self.context.get('request')
-#         user = request.user
-#         if user:
-#             access_permissions = obj.post_access_permissions.all()
-#             return [str(access_permission.user.id) for access_permission in access_permissions]
-#         return []
-    
-# class PostDetailSerializer(PostListItemSerializer):
-#     comments = serializers.SerializerMethodField()
-#     is_my_post = serializers.SerializerMethodField()
-        
-#     def get_comments(self, obj) -> list[dict]:
-#         comments = obj.comments.all()
-#         accessible_comments = [comment for comment in comments if has_access_to_comment(self.context.get('request').user, comment)]
-#         context = self.context
-#         return CommentDetailSerializer(accessible_comments, many=True, context=context).data
-    
-#     def get_is_my_post(self, obj) -> bool:
-#         request = self.context.get('request')
-#         if request is None:
-#             return None
-#         user = request.user
-#         if user:
-#             return obj.author == user
-#         return False
-
-# class CommentSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Comment
-#         fields = '__all__'
-        
-# class CommentDetailSerializer(CommentSerializer):
-#     like_count = serializers.SerializerMethodField()
-#     username = serializers.SerializerMethodField()
-#     user_profile_image = serializers.SerializerMethodField()
-#     is_liked = serializers.SerializerMethodField()
-#     is_my_comment = serializers.SerializerMethodField()
-    
-#     def get_like_count(self, obj):
-#         return obj.likes.count()
-    
-#     def get_username(self, obj):
-#         return obj.user.username
-    
-#     def get_user_profile_image(self, obj):
-#         request = self.context.get('request')
-#         if obj.user.profile_image:
-#             img_url = obj.user.profile_image.url
-#         else:
-#             img_url = ''
-#         return request.build_absolute_uri(img_url)
-    
-#     def get_is_liked(self, obj):
-#         request = self.context.get('request')
-#         user = request.user
-        
-#         if user:
-#             return obj.likes.filter(user=user).exists()
-#         return False
-    
-#     def get_is_my_comment(self, obj):
-#         request = self.context.get('request')
-#         user = request.user
-#         if user:
-#             return obj.user == user
-#         return False
-    
-        
-# class LikePostSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = LikePost
-#         fields = '__all__'
-
-# class LikeCommentSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = LikeComment
-#         fields = '__all__'
-        
-# class FollowSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Follow
-#         fields = '__all__'
-
-# class PostAccessPermissionSerializer(serializers.ModelSerializer):
-#     author_follow_relation = serializers.SerializerMethodField()
-#     target_follow_relation = serializers.SerializerMethodField()
-    
-#     class Meta:
-#         model = PostAccessPermission
-#         fields = '__all__'
-        
-# class NotificationSerializer(serializers.ModelSerializer): 
-#     class Meta:
-#         model = Notification
-#         fields = '__all__'
-        
-class NotificationDetailSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Notification
-        fields = ['id', 'user_id', 'author_id', 'post_id', 'type', 'created_at', 'author_profile_image', 'author_username', 'post_title', 'comment_id', 'comment_content', 'is_read'] 
-    
-    
-    user_id = serializers.SerializerMethodField()
-    author_id = serializers.SerializerMethodField()
-    post_id = serializers.SerializerMethodField()
-    author_profile_image = serializers.SerializerMethodField()
-    author_username = serializers.SerializerMethodField()
-    post_title = serializers.SerializerMethodField()
-    comment_id = serializers.SerializerMethodField()
-    comment_content = serializers.SerializerMethodField()
-    
-    def get_user_id(self, obj):
-        return obj.user.id
-    
-    
-    def get_author_id(self, obj):
-        return obj.author.id
-    
-    
-    def get_post_id(self, obj):
-        return obj.post.id
-    
-    
-    def get_author_profile_image(self, obj):
-        request = self.context.get('request')
-        if obj.author.profile_image:
-            img_url = obj.author.profile_image.url
-        else:
-            return None
-        return request.build_absolute_uri(img_url)
-    
-    
-    def get_author_username(self, obj):
-        return obj.author.username
-    
-    
-    def get_post_title(self, obj):
-        return obj.post.title
-    
-    
-    def get_comment_id(self, obj):
-        if obj.comment is None:
-            return None
-        
-        return obj.comment.id
-    
-    
-    def get_comment_content(self, obj):
-        if obj.comment is None:
-            return None
-        
-        return obj.comment.content
+        model = User
 
+        
+class PostSerializer(serializers.ModelSerializer): 
+    class Meta:
+        model = Post
+        fields = '__all__'
+
+        
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = '__all__'
+
+
+class LikePostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LikePost
+        fields = '__all__'
+
+
+class LikeCommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LikeComment
+        fields = '__all__'
+ 
+        
+class FollowerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Follower
+        fields = '__all__'
+        
+        
+class InboxSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InboxItem
+        fields = '__all__'
+        
+
+class FriendRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FriendRequest
+        fields = '__all__'
+        
 
 class AuthorSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'type', 'url', 'host', 'displayName', 'profileImage']
+        fields = ['id', 'type', 'url', 'host', 'displayName', 'profileImage', 'github']
 
     type = serializers.SerializerMethodField()
     url = serializers.SerializerMethodField()
@@ -270,67 +61,245 @@ class AuthorSerializer(serializers.ModelSerializer):
     profileImage = serializers.SerializerMethodField()
     id = serializers.SerializerMethodField()
 
+
     def get_id(self, obj):
         request = self.context.get('request')
-        return request.build_absolute_uri(str(obj.id))
+        return f"{request.scheme}://{request.get_host()}/authors/{obj.id}"
+
 
     def get_type(self, obj):
         return 'author'
 
+
     def get_url(self, obj):
-        request = self.context.get('request')
-        return request.build_absolute_uri(str(obj.id))
+        return self.get_id(obj)
+
 
     def get_host(self, obj):
         request = self.context.get('request')
         return 'http://' + request.get_host() + '/'
 
+
     def get_displayName(self, obj):
         return obj.username
 
+
     def get_profileImage(self, obj):
         request = self.context.get('request')
-        if obj.profile_image:
-            img_url = obj.profile_image.url
-        else:
-            return None
-        return request.build_absolute_uri(img_url)
+        if obj.is_foreign:
+            return obj.image_url
+        elif obj.profile_image and obj.profile_image.url:
+            return request.build_absolute_uri(obj.profile_image.url)
+        
+        return None
+
+
+class AuthorListSerializer(serializers.Serializer):
+    type = serializers.SerializerMethodField()
+    items = serializers.SerializerMethodField()
+    size = serializers.SerializerMethodField()
+    page = serializers.SerializerMethodField()
     
-class PostDetailSerializer(serializers.ModelSerializer):
-  comments = serializers.SerializerMethodField()
-  count = serializers.SerializerMethodField()
-  author = AuthorSerializer()
-  published = serializers.SerializerMethodField()
-  id = serializers.SerializerMethodField()
-  description = serializers.SerializerMethodField()
-  
-  class Meta:
-    model = Post
-    fields = ['id', 'title', 'source', 'origin', 'description', 'contentType', 'content', 'author', 'count', 'comments', 'published', 'visibility', 'unlisted', 'source', 'origin']
+    
+    def get_type(self, obj):
+        return 'authors'
+    
+    
+    def get_items(self, obj):
+        request = self.context.get('request')
+        return AuthorSerializer(obj, many=True, context={'request': request}).data
+    
+    
+    def get_size(self, obj):
+        return len(obj)
+    
+    
+    def get_page(self, obj):
+        return 1
 
-  
-  def get_id(self, obj):
-    request = self.context.get('request')
-    return obj.origin
 
-  
-  def get_comments(self, obj):
-    return str(obj.origin) + '/comments'
-
-  
-  def get_count(self, obj):
-    return obj.comments.count()
-
-  
-  def get_published(self, obj):
-    # iso 8601 timestamp
-    return obj.created_at.isoformat()
-
-  
-  def get_description(self, obj):
-    return "There is no description for this post."
-
-class InboxSerializer(serializers.ModelSerializer):
+class PostSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Inbox
+        model = Post
         fields = '__all__'
+        
+
+class CommentDetailSerializer(serializers.Serializer):
+    type = serializers.SerializerMethodField()
+    author = serializers.SerializerMethodField()
+    comment = serializers.SerializerMethodField()
+    contentType = serializers.SerializerMethodField()
+    published = serializers.SerializerMethodField()
+    id = serializers.SerializerMethodField()
+
+
+    def get_id(self, obj):
+        request = self.context.get('request')
+        return f'{request.scheme}://{request.get_host()}/authors/{obj.post.author.id}/posts/{obj.post.id}/comments/{obj.id}'
+    
+    
+    def get_type(self, obj):
+        return 'comment'
+    
+    
+    def get_comment(self, obj):
+        return obj.content
+    
+    
+    def get_contentType(self, obj):
+        return 'text/plain'
+    
+    
+    def get_published(self, obj):
+        # iso 8601 timestamp
+        return obj.created_at.isoformat()
+    
+    
+    def get_author(self, obj):
+        request = self.context.get('request')
+        return AuthorSerializer(obj.user, context={'request': request}).data
+
+
+class PostDetailSerializer(serializers.Serializer):
+    type = serializers.SerializerMethodField()
+    title = serializers.CharField()
+    id = serializers.SerializerMethodField()
+    origin = serializers.URLField()
+    source = serializers.URLField()
+    description = serializers.SerializerMethodField()
+    contentType = serializers.CharField()
+    content = serializers.CharField()
+    author = serializers.SerializerMethodField()
+    categories = serializers.SerializerMethodField()
+    count = serializers.SerializerMethodField()
+    comments = serializers.SerializerMethodField()
+    commentsSrc = serializers.SerializerMethodField()
+    published = serializers.SerializerMethodField()
+    visibility = serializers.CharField()
+    unlisted = serializers.BooleanField()
+    
+    
+    def get_type(self, obj):
+        return 'post'
+    
+    
+    def get_id(self, obj):
+        request = self.context.get('request')
+        return f'{request.scheme}://{request.get_host()}/authors/{obj.author.id}/posts/{obj.id}'
+    
+    
+    def get_description(self, obj):
+        return "This post is about " + obj.title
+    
+    
+    def get_author(self, obj):
+        request = self.context.get('request')
+        return AuthorSerializer(obj.author, context={'request': request}).data
+    
+    
+    def get_categories(self, obj):
+        return []
+    
+    
+    def get_count(self, obj):
+        return obj.comments.count()
+    
+    
+    def get_commentsSrc(self, obj):
+        request = self.context.get('request')
+        rval = {
+            "type": "comments",
+            "page": 1,
+            "post": f"{request.scheme}://{request.get_host()}/authors/{obj.author.id}/posts/{obj.id}",
+            "id": f"{request.scheme}://{request.get_host()}/authors/{obj.author.id}/posts/{obj.id}/comments",
+            "comments": []
+        }
+        
+        comments = obj.comments.all()
+        for comment in comments:
+            rval['comments'].append(CommentDetailSerializer(comment, context={'request': request}).data)
+        rval["size"] = len(rval['comments'])
+        
+        return rval
+    
+    
+    def get_published(self, obj):
+        # iso 8601 timestamp
+        return obj.created_at.isoformat()
+    
+    
+    def get_comments(self, obj):
+        request = self.context.get('request')
+        return f"{request.scheme}://{request.get_host()}/authors/{obj.author.id}/posts/{obj.id}/comments"
+    
+
+class PostListSerializer(serializers.Serializer):
+    type = serializers.SerializerMethodField()
+    items = serializers.SerializerMethodField()
+    size = serializers.SerializerMethodField()
+    page = serializers.SerializerMethodField()
+    
+    
+    def get_type(self, obj):
+        return 'posts'
+    
+    
+    def get_items(self, obj):
+        request = self.context.get('request')
+        return PostDetailSerializer(obj, many=True, context={'request': request}).data
+    
+    
+    def get_size(self, obj):
+        return len(obj)
+    
+    
+    def get_page(self, obj):
+        return 1
+
+
+class CommentListSerializer(serializers.Serializer):
+    type = serializers.SerializerMethodField()
+    items = serializers.SerializerMethodField()
+    size = serializers.SerializerMethodField()
+    page = serializers.SerializerMethodField()
+    
+    
+    def get_type(self, obj):
+        return 'comments'
+    
+    
+    def get_items(self, obj):
+        request = self.context.get('request')
+        return CommentDetailSerializer(obj, many=True, context={'request': request}).data
+    
+    
+    def get_size(self, obj):
+        return len(obj)
+    
+    
+    def get_page(self, obj):
+        return 1
+        
+        
+class FollowerListSerializer(serializers.Serializer):
+    type = serializers.SerializerMethodField()
+    items = serializers.SerializerMethodField()
+    size = serializers.SerializerMethodField()
+    page = serializers.SerializerMethodField()
+    
+    
+    def get_type(self, obj):
+        return 'followers'
+    
+    
+    def get_items(self, obj):
+        request = self.context.get('request')
+        return AuthorSerializer(obj, many=True, context={'request': request}).data
+    
+    
+    def get_size(self, obj):
+        return len(obj)
+    
+    
+    def get_page(self, obj):
+        return 1
