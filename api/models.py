@@ -28,13 +28,19 @@ class Post(models.Model):
     source = models.URLField()
     unlisted = models.BooleanField(default=False)
     image = models.ImageField(upload_to=MEDIA_URL, null=True, blank=True)
-    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_posts', null=True, blank=True)
+    is_foreign = models.BooleanField(default=False)
+
+
+class PostAccess(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='post_access')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='post_access')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('post', 'user')
 
 
 class Follower(models.Model):
-    """
-        This model is used to store the relationship between two local users.
-    """
     target = models.ForeignKey(User, on_delete=models.CASCADE, related_name='followers')
     follower = models.ForeignKey(User, on_delete=models.CASCADE, related_name='following')
     
@@ -43,9 +49,6 @@ class Follower(models.Model):
         
         
 class FriendRequest(models.Model):
-    """
-        This model is used to store the relationship between two local users.
-    """
     target = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friend_requests')
     requester = models.ForeignKey(User, on_delete=models.CASCADE, related_name='requested_friends')
     status = models.CharField(max_length=50, choices=[('ACCEPTED', 'ACCEPTED'), ('REJECTED', 'REJECTED'), ('PENDING', 'PENDING')], default='PENDING')

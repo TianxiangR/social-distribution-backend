@@ -1,4 +1,4 @@
-from .models import User, Post,  Comment
+from .models import User, Post, Comment, PostAccess
 from rest_framework.generics import get_object_or_404
 from rest_framework.exceptions import ParseError
 import uuid
@@ -97,7 +97,10 @@ def create_or_update_shared_post_from_request_data(request_data, receiver_obj):
     return post_obj
 
   author_obj = get_or_create_foreign_user(author)
-  post_obj = Post.objects.create(id=post_id, title=title, source=source, origin=origin, content=content, contentType=contentType, author=author_obj, receiver=receiver_obj ,visibility=visibility, unlisted=unlisted, created_at=datetime.strptime(published, '%Y-%m-%dT%H:%M:%S.%f%z'))
+  post_obj = Post.objects.create(id=post_id, title=title, source=source, origin=origin, content=content, contentType=contentType, author=author_obj, visibility=visibility, unlisted=unlisted, created_at=datetime.strptime(published, '%Y-%m-%dT%H:%M:%S.%f%z'), is_foreign=True)
+  post_obj.save()
+  
+  PostAccess.objects.create(post=post_obj, user=receiver_obj)
   
   for comment in comments:
     create_comment_from_request_data(comment, post_obj)

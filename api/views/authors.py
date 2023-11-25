@@ -11,7 +11,8 @@ class AuthorListRemote(GenericAPIView):
     permission_classes = [IsAuthenticated]
     queryset = User.objects.all()
     serializer_class = AuthorListSerializer
-    
+
+
     def get(self, request, **kwargs):
         users = self.get_queryset().filter(is_server=False, is_superuser=False, is_foreign=False)
         serializer = self.get_serializer(users, context = {'request': request})
