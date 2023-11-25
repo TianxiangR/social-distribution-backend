@@ -1,11 +1,11 @@
-from api.models import User, Post, InboxItem, FriendRequest
+from api.models import User, Post, InboxItem, FriendRequest, LikePost, LikeComment, Comment
 from api.serializer import InboxSerializer
 from rest_framework.generics import GenericAPIView, get_object_or_404
 from rest_framework.authentication import TokenAuthentication, BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from ..utils import get_or_create_foreign_user
+from ..utils import get_or_create_foreign_user, is_comment_detail_url, get_author_id_from_url, get_post_id_from_url, get_comment_id_from_url, is_post_detail_url, create_or_update_shared_post_from_request_data
 import json
 
 
@@ -13,22 +13,62 @@ class InboxListRemote(GenericAPIView):
     authentication_classes = [BasicAuthentication]
     permission_classes = [IsAuthenticated]
     lookup_url_kwarg = 'author_id'
-    queryset = InboxItem.objects.all()
+    queryset = User.objects.all().filter(is_server=False, is_superuser=False, is_foreign=False)
     serializer_class = InboxSerializer
     
     
     def post(self, request, **kwargs):
-        author = self.get_object()
+        receiver_obj = self.get_object()
         type = request.data.get('type', None)
+        sender_data = None
+        sender_obj = None
+        object = None
+        
+        if type is not None:
+          sender_data = request.data.get('actor', None)
+          if sender_data is None:
+            sender_data = request.data.get('author', None)
+          sender_obj = get_or_create_foreign_user(sender_data)
+          object = request.data.get('object', None)
         
         if type == "Follow":
-          requester_data = request.data.get('actor', None)
-          requester_obj = get_or_create_foreign_user(requester_data)
-          if requester_obj:
-            FriendRequest.objects.create(target=author, requester=requester_obj)
-            InboxItem.objects.create(receiver=author, type=type, requester=requester_obj, item=json.dumps(request.data))
+          if sender_obj:
+            FriendRequest.objects.create(target=receiver_obj, requester=sender_obj)
+            InboxItem.objects.create(receiver=receiver_obj, type=type, requester=sender_obj, item=json.dumps(request.data))
             return Response(status=status.HTTP_200_OK)
+          
+        elif type == "Like":
+          if is_comment_detail_url(object):
+            comment_id = get_comment_id_from_url(object)
+            comment_obj = Comment.objects.filter(id=comment_id).first()
+            if comment_obj:
+              LikeComment.objects.create(comment=comment_obj, user=sender_obj)
+              InboxItem.objects.create(receiver=receiver_obj, sender=sender_obj, type=type, item=json.dumps(request.data))
+              return Response(status=status.HTTP_200_OK)
+          elif is_post_detail_url(object):
+            post_id = get_post_id_from_url(object)
+            post_obj = Post.objects.filter(id=post_id).first()
+            if post_obj:
+              LikePost.objects.create(post=post_obj, user=sender_obj)
+              InboxItem.objects.create(receiver=receiver_obj, sender=sender_obj, type=type, item=json.dumps(request.data))
+              return Response(status=status.HTTP_200_OK)
         
+        elif type == "comment":
+          post_id = get_post_id_from_url(object)
+          post_obj = Post.objects.filter(id=post_id).first()
+          if post_obj:
+            Comment.objects.create(post=post_obj, user=sender_obj, comment=request.data.get('comment', None))
+            InboxItem.objects.create(receiver=receiver_obj, sender=sender_obj, type=type, item=json.dumps(request.data))
+            return Response(status=status.HTTP_200_OK)
+          
+        elif type == "post":
+          visibility = request.data.get('visibility', None)
+          if visibility != "PUBLIC":
+            create_or_update_shared_post_from_request_data(request.data, receiver_obj)
+          InboxItem.objects.create(receiver=receiver_obj, sender=sender_obj, type=type, item=json.dumps(request.data))
+          return Response(status=status.HTTP_200_OK)
+          
+              
         return Response(status=status.HTTP_400_BAD_REQUEST)
           
             

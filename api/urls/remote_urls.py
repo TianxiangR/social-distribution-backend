@@ -1,6 +1,6 @@
 from django.urls import path
 
-from ..views import authors, posts, comments, followers
+from ..views import authors, posts, comments, followers, inbox
 
 urlpatterns = [
     # cross site apis
@@ -11,4 +11,5 @@ urlpatterns = [
     path('authors/<uuid:author_id>/posts/<uuid:post_id>/comments', comments.CommentListRemote.as_view(), name='comment-list'),
     path('authors/<uuid:author_id>/posts/<uuid:post_id>/comments/<uuid:comment_id>', comments.CommentDetailRemote.as_view(), name='comment-detail'),
     path('authors/<uuid:author_id>/followers', followers.FollowerListRemote.as_view(), name='follower-list'),
+    path('authors/<uuid:author_id>/inbox', inbox.InboxListRemote.as_view(), name='inbox-list'),
 ]

@@ -28,7 +28,7 @@ class Post(models.Model):
     source = models.URLField()
     unlisted = models.BooleanField(default=False)
     image = models.ImageField(upload_to=MEDIA_URL, null=True, blank=True)
-    is_shared = models.BooleanField(default=False)
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_posts', null=True, blank=True)
 
 
 class Follower(models.Model):
@@ -70,11 +70,10 @@ class Comment(models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
     content = models.CharField(max_length=500)
     created_at = models.DateTimeField(auto_now_add=True)
-    is_private = models.BooleanField(default=False)
     
     
 class LikeComment(models.Model):
-    user = models.URLField()
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comment_likes')
     comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='likes')
     created_at = models.DateTimeField(auto_now_add=True)
     
