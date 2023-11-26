@@ -5,7 +5,7 @@ iAmTeaPotAdapter = IAmTeaPotAdapter()
 ctrlAltDefeatAdapter = CtrlAltDefeatAdapter()
 
 API_LOOKUP = {
-  iAmTeaPotAdapter.host: IAmTeaPotAdapter,
-  ctrlAltDefeatAdapter.host: CtrlAltDefeatAdapter
+  iAmTeaPotAdapter.host: iAmTeaPotAdapter,
+  # ctrlAltDefeatAdapter.host: CtrlAltDefeatAdapter
 }
 

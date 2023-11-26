@@ -2,6 +2,7 @@ import requests
 from .io_adapters.base_io_adapter import BaseIOAdapter
 import os
 import json
+import logging
 
 class BaseServerAdapter():
   host = None
@@ -78,8 +79,15 @@ class BaseServerAdapter():
     resp = requests.get(url, auth=(self.username, self.password))
     response = {}
     response['status_code'] = resp.status_code
-    resp_data = self.get_author_list_request_adapter.outputTransformer(resp.json())
-    response['body'] = resp_data.get('items', [])
+    if resp.status_code > 299:
+      logging.error(resp.content)
+      print(url)
+    
+    try:
+      resp_data = self.get_author_list_request_adapter.outputTransformer(resp.json())
+      response['body'] = resp_data.get('items', [])
+    except json.decoder.JSONDecodeError:
+      response['body'] = []
     return response
   
   def request_get_author_detail(self, author_id):
@@ -99,8 +107,11 @@ class BaseServerAdapter():
     resp = requests.get(url, auth=(self.username, self.password))
     response = {}
     response['status_code'] = resp.status_code
-    resp_data = self.get_author_followers_request_adapter.outputTransformer(resp.json())
-    response['body'] = resp_data
+    try:
+      resp_data = self.get_author_followers_request_adapter.outputTransformer(resp.json())
+      response['body'] = resp_data
+    except json.decoder.JSONDecodeError:
+      response['body'] = []
     return response
   
   def request_get_author_following_check(self, author_id, target_author_id):
@@ -108,8 +119,11 @@ class BaseServerAdapter():
     resp = requests.get(url, auth=(self.username, self.password))
     response = {}
     response['status_code'] = resp.status_code
-    resp_data = self.get_author_following_check_request_adapter.outputTransformer(resp.json())
-    response['body'] = resp_data
+    try:
+      resp_data = self.get_author_following_check_request_adapter.outputTransformer(resp.json())
+      response['body'] = resp_data
+    except json.decoder.JSONDecodeError:
+      response['body'] = {}
     return response
   
   def request_get_author_posts(self, author_id):
@@ -117,8 +131,11 @@ class BaseServerAdapter():
     resp = requests.get(url, auth=(self.username, self.password))
     response = {}
     response['status_code'] = resp.status_code
-    resp_data = self.get_author_posts_request_adapter.outputTransformer(resp.json())
-    response['body'] = resp_data.get('items', [])
+    try:
+      resp_data = self.get_author_posts_request_adapter.outputTransformer(resp.json())
+      response['body'] = resp_data.get('items', [])
+    except json.decoder.JSONDecodeError:
+      response['body'] = []
     return response
   
   def request_get_author_post_detail(self, author_id, post_id):
@@ -126,8 +143,11 @@ class BaseServerAdapter():
     resp = requests.get(url, auth=(self.username, self.password))
     response = {}
     response['status_code'] = resp.status_code
-    resp_data = self.get_author_post_detail_request_adapter.outputTransformer(resp.json())
-    response['body'] = resp_data
+    try: 
+      resp_data = self.get_author_post_detail_request_adapter.outputTransformer(resp.json())
+      response['body'] = resp_data
+    except json.decoder.JSONDecodeError:
+      response['body'] = {}
     return response
   
   def request_get_author_image_post(self, author_id, post_id):
@@ -208,16 +228,16 @@ class BaseServerAdapter():
     response['status_code'] = resp.status_code
     return response
   
-  def request_post_author_post_like(self, author_id, post_id):
-    url = self.get_author_post_likes_url(author_id, post_id)  
-    resp = requests.post(url, auth=(self.username, self.password))
+  def request_post_author_post_like(self, author_id, post_id, data):
+    url = self.get_author_inbox_url(author_id)
+    resp = requests.post(url, auth=(self.username, self.password), json=data)
     response = {}
     response['status_code'] = resp.status_code
     return response
   
-  def request_post_author_post_comment_like(self, author_id, post_id, comment_id):
-    url = self.get_author_post_comment_likes_url(author_id, post_id, comment_id)
-    resp = requests.post(url, auth=(self.username, self.password))
+  def request_post_author_post_comment_like(self, author_id, post_id, comment_id, data):
+    url = self.get_author_inbox_url(author_id)
+    resp = requests.post(url, auth=(self.username, self.password), json=data)
     response = {}
     response['status_code'] = resp.status_code
     return response

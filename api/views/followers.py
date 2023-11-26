@@ -1,4 +1,4 @@
-from api.models import Follower, User
+from api.models import Follow, User
 from api.serializer import  FollowerListSerializer
 from rest_framework.generics import GenericAPIView
 from rest_framework.authentication import BasicAuthentication
@@ -17,7 +17,7 @@ class FollowerListRemote(GenericAPIView):
     
     def get(self, request, **kwargs):
         author = self.get_object()
-        followers = Follower.objects.filter(target=author)
+        followers = Follow.objects.filter(target=author)
         data_set = set()
         for follower in followers:
             data_set.add(follower.follower)

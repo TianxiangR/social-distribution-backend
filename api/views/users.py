@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate
 from api.models import User
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
-from api.serializer import  UserSerializer,  AuthorSerializer
+from api.serializer import  UserSerializer,  AuthorRemoteSerializer
 from rest_framework.authtoken.models import Token
 from drf_spectacular.utils import extend_schema
 from rest_framework.generics import GenericAPIView
@@ -10,7 +10,6 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from api.server_adapters.my_site_adapter import MySiteAdapter
 
 # Create your views here.
 
@@ -33,24 +32,24 @@ def signup(request):
 @extend_schema(
     responses={200: UserSerializer(many=True), 404: None}
 )
-class UserList(GenericAPIView):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
-    queryset = User.objects.all()
-    serializer_class = AuthorSerializer
+# class UserList(GenericAPIView):
+#     authentication_classes = [TokenAuthentication]
+#     permission_classes = [IsAuthenticated]
+#     queryset = User.objects.all()
+#     serializer_class = AuthorSerializer
     
-    def get(self, request, **kwargs):
-        users = self.get_queryset().filter(is_server=False, is_superuser=False).exclude(id=request.user.id)
-        serializer = self.get_serializer(users, many=True)
-        adapter = MySiteAdapter()
-        response = adapter.request_get_author_list()
+#     def get(self, request, **kwargs):
+#         users = self.get_queryset().filter(is_server=False, is_superuser=False).exclude(id=request.user.id)
+#         serializer = self.get_serializer(users, many=True)
+#         adapter = MySiteAdapter()
+#         response = adapter.request_get_author_list()
         
-        user_list = serializer.data
+#         user_list = serializer.data
         
-        if response['status_code'] == 200:
-            user_list.extend(response['body'])
+#         if response['status_code'] == 200:
+#             user_list.extend(response['body'])
             
-        return  Response(user_list, status=status.HTTP_200_OK)
+#         return  Response(user_list, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])

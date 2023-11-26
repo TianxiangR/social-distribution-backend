@@ -40,26 +40,24 @@ class PostAccess(models.Model):
         unique_together = ('post', 'user')
 
 
-class Follower(models.Model):
-    target = models.ForeignKey(User, on_delete=models.CASCADE, related_name='followers')
-    follower = models.ForeignKey(User, on_delete=models.CASCADE, related_name='following')
+class Follow(models.Model):
+    target = models.ForeignKey(User, on_delete=models.CASCADE, related_name='follow_relations')
+    follower = models.ForeignKey(User, on_delete=models.CASCADE, related_name='following_relations')
     
     class Meta:
         unique_together = ('target', 'follower')
         
         
 class FriendRequest(models.Model):
+    id = models.UUIDField(primary_key=True, unique=True, editable=False, default=uuid.uuid4)
     target = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friend_requests')
     requester = models.ForeignKey(User, on_delete=models.CASCADE, related_name='requested_friends')
     status = models.CharField(max_length=50, choices=[('ACCEPTED', 'ACCEPTED'), ('REJECTED', 'REJECTED'), ('PENDING', 'PENDING')], default='PENDING')
     created_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        unique_together = ('target', 'requester')
 
 
 class LikePost(models.Model):
-    user = models.URLField()
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='post_likes')
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='likes')
     created_at = models.DateTimeField(auto_now_add=True)
     
