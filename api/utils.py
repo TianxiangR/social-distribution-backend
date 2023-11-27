@@ -13,7 +13,15 @@ def is_comment_detail_url(url):
 def is_post_detail_url(url):
   return re.search(r"^https?:\/\/.+\/authors\/([0-9|a-z|]{8}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{12})\/posts\/([0-9|a-z|]{8}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{12})$", url) is not None \
     or re.search(r"^https?:\/\/.+\/authors\/([0-9|a-z|]{32})\/posts\/([0-9|a-z|]{32})$", url) is not None
-  
+
+
+def is_uuid(str):
+  try:
+    uuid.UUID(str)
+    return True
+  except:
+    return False
+
   
 def get_post_id_from_url(url):
   result =  re.search("posts\/([0-9|a-z|]{8}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{12})", url)
@@ -46,7 +54,10 @@ def get_comment_id_from_url(url):
 
 
 def get_or_create_user(obj):
-  id = get_author_id_from_url(obj["id"])
+  if is_uuid(obj["id"]):
+    id = obj["id"]
+  else:
+    id = get_author_id_from_url(obj["id"])
   if User.objects.filter(id=id).exists():
     return User.objects.get(id=id)
   else:
@@ -71,7 +82,10 @@ def create_comment_from_request_data(request_data, post_obj):
   comment = request_data.get('comment', None)
   published = request_data.get('published', None)
   id = request_data.get('id', None)
-  comment_id = get_comment_id_from_url(id)
+  if is_uuid(id):
+    comment_id = id
+  else:
+    comment_id = get_comment_id_from_url(id)
   created_at = datetime.strptime(published, '%Y-%m-%dT%H:%M:%S.%f%z')
   
   if not Comment.objects.filter(id=comment_id).exists():
@@ -96,7 +110,10 @@ def create_or_update_shared_post_from_request_data(request_data, receiver_obj):
   comments = []
   if commentsSrc is not None:
     comments = commentsSrc.get('comments', [])
-  post_id = get_post_id_from_url(id)
+  if is_uuid(id):
+    post_id = id
+  else:
+    post_id = get_post_id_from_url(id)
   
   
   post_obj = None

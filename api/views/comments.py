@@ -87,11 +87,10 @@ class CommentListLocal(GenericAPIView):
             "@context": "https://www.w3.org/ns/activitystreams",
             "type": "comment",
             "author": AuthorRemoteSerializer(requester, context={'request': request}).data,
-            "object": CommentDetailRemoteSerializer(serializer.instance).data,
+            "object": CommentDetailRemoteSerializer(serializer.instance, context={'request': request}).data,
           }
           if not post.is_foreign:
-            request.data = request_data
-            handleInbox(post.author, request)
+            handleInbox(post.author, request_data)
           else:
             post_author_host = parse_url(post.author.host).host
             if post_author_host in API_LOOKUP:

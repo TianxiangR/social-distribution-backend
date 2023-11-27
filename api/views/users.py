@@ -32,25 +32,6 @@ def signup(request):
 @extend_schema(
     responses={200: UserSerializer(many=True), 404: None}
 )
-# class UserList(GenericAPIView):
-#     authentication_classes = [TokenAuthentication]
-#     permission_classes = [IsAuthenticated]
-#     queryset = User.objects.all()
-#     serializer_class = AuthorSerializer
-    
-#     def get(self, request, **kwargs):
-#         users = self.get_queryset().filter(is_server=False, is_superuser=False).exclude(id=request.user.id)
-#         serializer = self.get_serializer(users, many=True)
-#         adapter = MySiteAdapter()
-#         response = adapter.request_get_author_list()
-        
-#         user_list = serializer.data
-        
-#         if response['status_code'] == 200:
-#             user_list.extend(response['body'])
-            
-#         return  Response(user_list, status=status.HTTP_200_OK)
-
 
 @api_view(['POST'])
 def update_password(request, pk):

@@ -1,5 +1,5 @@
 from api.models import User
-from api.serializer import AuthorRemoteSerializer, AuthorListLocalSerializer, AuthorLocalSerializer, AuthorListRemoteSerializer
+from api.serializer import AuthorRemoteSerializer, AuthorListLocalSerializer, AuthorLocalSerializer, AuthorListRemoteSerializer, UserSerializer
 from rest_framework.generics import GenericAPIView
 from rest_framework.authentication import BasicAuthentication, TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
@@ -93,3 +93,37 @@ class AuthorListLocal(GenericAPIView):
                 pass
         
         return Response(response_data, status=status.HTTP_200_OK)
+      
+      
+class Profile(GenericAPIView):
+  authentication_classes = [TokenAuthentication]
+  permission_classes = [IsAuthenticated]
+  queryset = User.objects.all()
+  serializer_class = AuthorLocalSerializer
+  
+  
+  def get(self, request, **kwargs):
+    user = request.user
+    serializer = self.get_serializer(user, context = {'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)
+  
+  
+  def patch(self, request, **kwargs):
+    user = request.user
+    username = request.data.get('username', None)
+    github = request.data.get('github', None)
+    update_data = {
+      "username": username,
+      "github": github
+    }
+    
+    serializer = UserSerializer(user, data=update_data, partial=True)
+    
+    if serializer.is_valid():
+      serializer.save()
+      return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    

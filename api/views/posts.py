@@ -88,17 +88,16 @@ class PostListLocal(GenericAPIView):
       for user in User.objects.filter(is_server=False, is_superuser=False):
         if user.id != author.id and has_access_to_post(instance, user):
           receiver_obj = user
-          object = PostDetailRemoteSerializer(instance).data
+          object = PostDetailRemoteSerializer(instance, context={'request': request}).data
           request_data = {
             "@context": "https://www.w3.org/ns/activitystreams",
-            "summary": f"{author.displayName} shared a post with you",
+            "summary": f"{author.username} shared a post with you",
             "author": AuthorRemoteSerializer(author, context={'request': request}).data,
             "object": object,
           }
           if not user.is_foreign:
-            request.data = request_data
             try:
-              handleInbox(receiver_obj, request)
+              handleInbox(receiver_obj, request_data)
             except:
               pass
           else:

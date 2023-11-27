@@ -41,7 +41,7 @@ class PostAccess(models.Model):
 
 
 class Follow(models.Model):
-    target = models.ForeignKey(User, on_delete=models.CASCADE, related_name='follow_relations')
+    target = models.ForeignKey(User, on_delete=models.CASCADE, related_name='followed_relations')
     follower = models.ForeignKey(User, on_delete=models.CASCADE, related_name='following_relations')
     
     class Meta:

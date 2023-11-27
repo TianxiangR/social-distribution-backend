@@ -11,12 +11,11 @@ class FollowerListRemote(GenericAPIView):
     authentication_classes = [BasicAuthentication]
     permission_classes = [IsAuthenticated]
     queryset = User.objects.all().filter(is_server=False, is_superuser=False, is_foreign=False)
-    lookup_url_kwarg = 'author_id'
     serializer_class = FollowerListSerializer
     
     
     def get(self, request, **kwargs):
-        author = self.get_object()
+        author = request.user
         followers = Follow.objects.filter(target=author)
         data_set = set()
         for follower in followers:

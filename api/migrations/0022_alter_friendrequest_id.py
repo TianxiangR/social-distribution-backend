@@ -7,13 +7,13 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('api', '0020_alter_likepost_user'),
+        ('api', '0021_alter_friendrequest_id'),
     ]
 
     operations = [
         migrations.AlterField(
             model_name='friendrequest',
             name='id',
-            field=models.CharField(default=uuid.uuid4, editable=False, max_length=100, primary_key=True, serialize=False, unique=True),
+            field=models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True),
         ),
     ]

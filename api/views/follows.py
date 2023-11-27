@@ -22,7 +22,7 @@ class FollowerListLocal(GenericAPIView):
   def get(self, request, **kwargs):
     author = request.user
     followers = []
-    for following_relation in author.following_relations.all():
+    for following_relation in author.followed_relations.all():
       followers.append(following_relation.follower)
     
     serializer  = self.get_serializer(followers, context = {'request': request})
@@ -40,7 +40,7 @@ class FollowerListRemote(GenericAPIView):
   def get(self, request, **kwargs):
     author = self.get_object()
     followers = []
-    for following_relation in author.following_relations.all():
+    for following_relation in author.followed_relations.all():
       followers.append(following_relation.follower)
     
     serializer  = self.get_serializer(followers, context = {'request': request})
@@ -57,16 +57,16 @@ class FollowingListLocal(GenericAPIView):
   def get(self, request, **kwargs):
     author = request.user
     following = []
-    for following_relation in author.follow_relations.all():
-      if not following_relation.following.is_foreign:
-        following.append(following_relation.following)
+    for following_relation in author.following_relations.all():
+      if not following_relation.target.is_foreign:
+        following.append(following_relation.target)
       else:
-        user_host = parse_url(following_relation.following.host).host
+        user_host = parse_url(following_relation.target.host).host
         if user_host in API_LOOKUP:
           adapter = API_LOOKUP[user_host]
-          resp = adapter.request_get_author_following_check(following_relation.following.id, author.id)
+          resp = adapter.request_get_author_following_check(following_relation.target.id, author.id)
           if resp["status_code"] == 200:
-            following.append(following_relation.following)
+            following.append(following_relation.target)
 
     serializer  = self.get_serializer(following, context = {'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)

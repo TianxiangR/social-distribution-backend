@@ -16,6 +16,9 @@ urlpatterns = [
     path('followings/', follows.FollowingListLocal.as_view(), name='following_list_local'),
     
     path('friend-requests/', friend_request.FriendRequestList.as_view(), name='friend_request_list'),
+    path('friend-requests/<uuid:friend_request_id>', friend_request.FriendRequestDetail.as_view(), name='friend_request_detail'),
+    
+    path('my-profile',authors.Profile.as_view(), name='my_profile'),
     
     path('posts/', posts.PostListLocal.as_view(), name='post_list_local'),
     path('posts/<uuid:post_id>', posts.PostDetailLocal.as_view(), name='post_detail_local'),

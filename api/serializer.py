@@ -7,6 +7,7 @@ import uuid
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
+        fields = '__all__'
 
         
 class PostSerializer(serializers.ModelSerializer): 
@@ -66,7 +67,7 @@ class AuthorLocalSerializer(serializers.ModelSerializer):
     def get_is_following(self, obj):
         request = self.context.get('request')
         user = request.user
-        return obj.follow_relations.filter(follower_id=user.id).exists()
+        return obj.followed_relations.filter(follower_id=user.id).exists()
     
 
     def get_type(self, obj):

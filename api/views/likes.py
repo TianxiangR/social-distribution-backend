@@ -1,5 +1,5 @@
 from api.models import User, Post, Comment, LikePost, LikeComment
-from api.serializer import AuthorListRemoteSerializer, AuthorListLocalSerializer, LikePostSerializer, LikeCommentSerializer
+from api.serializer import AuthorListRemoteSerializer, AuthorListLocalSerializer, LikePostSerializer, LikeCommentSerializer, AuthorRemoteSerializer
 from rest_framework.generics import GenericAPIView, get_object_or_404
 from rest_framework.authentication import TokenAuthentication, BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
@@ -84,10 +84,10 @@ class LikePostListLocal(LikePostListRemote):
   def post(self, request, **kwargs):
     requester = get_object_or_404(User, id=request.user.id)
     post = self.get_object()
-    author_data = AuthorListRemoteSerializer(requester, context={'request': request}).data
+    author_data = AuthorRemoteSerializer(requester, context={'request': request}).data
     request_data = {
       "@context": "https://www.w3.org/ns/activitystreams",
-      "summary": f"{requester.displayName} liked your post",
+      "summary": f"{requester.username} liked your post",
       "type": "Like",
       "object": post.origin,
       "author": author_data,
@@ -105,9 +105,7 @@ class LikePostListLocal(LikePostListRemote):
     if has_access_to_post(post, requester):
       serializer = LikePostSerializer(data={'user': requester.id, 'post': post.id})
       if serializer.is_valid():
-        serializer.save()
-        request.data = request_data
-        handleInbox(post.author, request)
+        handleInbox(post.author, request_data)
         return Response(status=status.HTTP_200_OK)
       else:
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -151,16 +149,17 @@ class LikeCommentListLocal(LikeCommentListRemote):
     comment_author = comment.user
     comment_author_host = parse_url(comment_author.host).host
     
-    author_data = AuthorListRemoteSerializer(requester, context={'request': request}).data
+    author_data = AuthorRemoteSerializer(requester, context={'request': request}).data
     request_data = {
       "@context": "https://www.w3.org/ns/activitystreams",
-      "summary": f"{requester.displayName} liked your comment",
+      "summary": f"{requester.username} liked your comment",
       "type": "Like",
       "object": post.origin + f"/comments/{comment.id}",
       "author": author_data,
     }
     
-    if comment_author_host is not None and comment_author_host != request.get_host():
+    request_host = request.get_host().split(":")[0]
+    if comment_author_host is not None and comment_author_host != request_host:
       if comment_author_host in API_LOOKUP:
         adapter = API_LOOKUP[comment_author_host]
 
@@ -172,9 +171,7 @@ class LikeCommentListLocal(LikeCommentListRemote):
     if has_access_to_post(post, requester):
       serializer = LikeCommentSerializer(data={'user': requester.id, 'comment': comment.id})
       if serializer.is_valid():
-        serializer.save()
-        request.data = request_data
-        handleInbox(comment_author, request)
+        handleInbox(comment_author, request_data)
         return Response(status=status.HTTP_200_OK)
       else:
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
