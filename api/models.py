@@ -27,7 +27,6 @@ class Post(models.Model):
     origin = models.URLField()
     source = models.URLField()
     unlisted = models.BooleanField(default=False)
-    image = models.TextField(null=True, blank=True)
     is_foreign = models.BooleanField(default=False)
 
 

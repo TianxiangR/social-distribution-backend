@@ -11,6 +11,7 @@ from datetime import datetime
 from .inbox import handleInbox
 from urllib3.util import parse_url
 from ..api_lookup import API_LOOKUP
+from ..utils import get_author_id_from_url
 
 
 class PostListRemote(GenericAPIView):
@@ -85,26 +86,28 @@ class PostListLocal(GenericAPIView):
     if serializer.is_valid():
       serializer.save()
       instance = serializer.instance
-      for user in User.objects.filter(is_server=False, is_superuser=False):
+      object = PostDetailRemoteSerializer(instance, context={'request': request}).data
+      request_data = {
+        "@context": "https://www.w3.org/ns/activitystreams",
+        "summary": f"{author.username} shared a post with you",
+        "author": AuthorRemoteSerializer(author, context={'request': request}).data,
+        "object": object,
+      }
+      for user in User.objects.filter(is_server=False, is_superuser=False, is_foreign=False):
         if user.id != author.id and has_access_to_post(instance, user):
           receiver_obj = user
-          object = PostDetailRemoteSerializer(instance, context={'request': request}).data
-          request_data = {
-            "@context": "https://www.w3.org/ns/activitystreams",
-            "summary": f"{author.username} shared a post with you",
-            "author": AuthorRemoteSerializer(author, context={'request': request}).data,
-            "object": object,
-          }
-          if not user.is_foreign:
-            try:
-              handleInbox(receiver_obj, request_data)
-            except:
-              pass
-          else:
-            user_host = parse_url(user.host).host
-            if user_host in API_LOOKUP:
-              adapter = API_LOOKUP[user_host]
-              adapter.request_post_author_inbox(user.id, request_data)
+          try:
+            handleInbox(receiver_obj, request_data)
+          except:
+            pass
+      
+      for adapter in API_LOOKUP.values():
+        author_list_resp = adapter.request_get_author_list()
+        if author_list_resp["status_code"] == 200:
+          for foreign_author in author_list_resp["body"]:
+            foreign_author_id = get_author_id_from_url(foreign_author["id"])
+            adapter.request_post_author_inbox(foreign_author_id, request_data)
+
       return Response(serializer.data, status=status.HTTP_200_OK)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -1,6 +1,6 @@
 from api.models import User
 from api.serializer import AuthorRemoteSerializer, AuthorListLocalSerializer, AuthorLocalSerializer, AuthorListRemoteSerializer
-from rest_framework.generics import GenericAPIView
+from rest_framework.generics import GenericAPIView, get_object_or_404
 from rest_framework.authentication import BasicAuthentication, TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -70,3 +70,21 @@ class FollowingListLocal(GenericAPIView):
 
     serializer  = self.get_serializer(following, context = {'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
+  
+  
+class FollowDetailRemote(GenericAPIView):
+  permission_classes = [IsAuthenticated]
+  authentication_classes = [BasicAuthentication]
+  serializer_class = AuthorRemoteSerializer
+  lookup_url_kwarg = 'author_id'
+  queryset = User.objects.filter(is_server=False, is_superuser=False)
+  
+  
+  def get(self, request, **kwargs):
+    author = self.get_object()
+    foreign_id = kwargs.get('foreign_id', None)
+    foreign_author = get_object_or_404(User, id=foreign_id)
+    if foreign_author in author.following_relations.all():
+      return Response(status=status.HTTP_200_OK)
+    
+    return Response(status=status.HTTP_404_NOT_FOUND)

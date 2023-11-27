@@ -68,7 +68,7 @@ def get_or_create_user(obj):
       password="default",
       host = obj["host"],
       url = obj["url"],
-      github = obj["github"],
+      github = obj.get("github", None),
       is_foreign = True,
       image_url = obj["profileImage"]
     )

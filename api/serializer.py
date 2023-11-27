@@ -256,6 +256,8 @@ class PostBriefLocalSerializer(PostBriefSerializer):
     is_liked = serializers.SerializerMethodField()
     like_count = serializers.SerializerMethodField()
     is_my_post = serializers.SerializerMethodField()
+    content = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
     
     def get_is_liked(self, obj):
         request = self.context.get('request')
@@ -271,6 +273,20 @@ class PostBriefLocalSerializer(PostBriefSerializer):
         request = self.context.get('request')
         user = request.user
         return obj.author.id == user.id
+    
+    def get_content(self, obj):
+        if obj.contentType == "image":
+            return ""
+        return obj.content
+    
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.contentType == "image":
+            return f"{request.scheme}://{request.get_host()}/authors/{obj.author.id}/posts/{obj.id}/image"
+        
+        return None
+    
+
 
 
 class PostDetailRemoteSerializer(PostBriefSerializer):
@@ -294,10 +310,11 @@ class PostDetailRemoteSerializer(PostBriefSerializer):
         return rval
 
 
-class PostDetailLocalSerializer(PostDetailRemoteSerializer):
+class PostDetailLocalSerializer(PostBriefLocalSerializer):
     commentsSrc = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
     like_count = serializers.SerializerMethodField()
+    
     
     def get_is_liked(self, obj):
         request = self.context.get('request')
@@ -323,8 +340,7 @@ class PostDetailLocalSerializer(PostDetailRemoteSerializer):
         rval["size"] = len(rval['comments'])
         
         return rval
-
-
+    
 
 class PostBriefListSerializer(serializers.Serializer):
     type = serializers.SerializerMethodField()

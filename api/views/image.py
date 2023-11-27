@@ -22,7 +22,7 @@ class PostImage(GenericAPIView):
     post = self.get_object()
     
     try:
-      image = post.image
+      image = post.content
       image_type = image.split(';')[0].split(":")[1]
       base64_data = image.split(',')[1]
       image_binary = base64.b64decode(base64_data)

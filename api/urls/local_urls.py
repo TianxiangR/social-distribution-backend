@@ -25,5 +25,6 @@ urlpatterns = [
     path('posts/<uuid:post_id>/likes', likes.LikePostListLocal.as_view(), name='like_post_list_local'),
     path('posts/<uuid:post_id>/comments/', comments.CommentListLocal.as_view(), name='comment_list_local'),   
     path('posts/<uuid:post_id>/comments/<uuid:comment_id>/likes', likes.LikeCommentListLocal.as_view(), name='like_comment_list_local'),
+    
     path('posts/<uuid:post_id>/image', image.PostImage.as_view(), name='post_image'),
 ]

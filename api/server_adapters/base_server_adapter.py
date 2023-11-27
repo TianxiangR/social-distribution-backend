@@ -82,6 +82,7 @@ class BaseServerAdapter():
     if resp.status_code > 299:
       logging.error(resp.content)
       print(url)
+      print(self.username, self.password)
     
     try:
       resp_data = self.get_author_list_request_adapter.outputTransformer(resp.json())
@@ -218,6 +219,8 @@ class BaseServerAdapter():
     resp = requests.post(url, json=request_data, auth=(self.username, self.password))
     response = {}
     response['status_code'] = resp.status_code
+    logging.log(logging.ERROR, resp.status_code)
+    logging.log(logging.ERROR, self.base_url)
     return response
   
   def request_post_author_post_comment(self, author_id, post_id, data):
