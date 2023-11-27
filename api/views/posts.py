@@ -28,7 +28,7 @@ class PostListRemote(GenericAPIView):
         for post in data["items"]:
           post["commentsSrc"]["comments"].sort(key=lambda x: datetime.strptime(x["published"], '%Y-%m-%dT%H:%M:%S.%f%z'), reverse=True)
         
-        data["items"].sort(key=lambda x: datetime.striptime(x["published"], '%Y-%m-%dT%H:%M:%S.%f%z'), reverse=True)
+        data["items"].sort(key=lambda x: datetime.strptime(x["published"], '%Y-%m-%dT%H:%M:%S.%f%z'), reverse=True)
           
         return Response(serializer.data, status=status.HTTP_200_OK)
     
