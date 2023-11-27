@@ -5,7 +5,7 @@ from ..utils import has_access_to_comment
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'username', 'email', 'profile_image', 'created_at']
+        fields = ['id', 'username', 'profile_image', 'created_at']
     
     # correct way to hash password: https://stackoverflow.com/questions/49189484/how-to-mention-password-field-in-serializer
     def create(self, validated_data):
@@ -29,7 +29,7 @@ class UserInfoSerializer(UserSerializer):
     
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'username', 'email', 'profile_image', 'created_at', 'is_following']
+        fields = ['id', 'username', 'profile_image', 'created_at', 'is_following']
     
     def get_profile_image(self, obj):
         request = self.context.get('request')

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path
 
-from ..views import follows, users, posts, comments, notifications, cross_site
+from ..views import follows, users, posts, comments, notifications, cross_site, liked
 
 urlpatterns = [
     # insite apis
@@ -23,4 +23,5 @@ urlpatterns = [
     
     path('notifications', notifications.NotificationList.as_view(), name='notifications'),
     path('notifications/<uuid:notification_id>', notifications.NotificationDetail.as_view(), name='notifications'),
+    path('authors/<uuid:author_id>/liked', liked.Liked.as_view(), name='liked'),
 ]
