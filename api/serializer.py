@@ -82,8 +82,8 @@ class AuthorLocalSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if obj.is_foreign:
             return obj.image_url
-        elif obj.profile_image and obj.profile_image.url:
-            return request.build_absolute_uri(obj.profile_image.url)
+        elif obj.profile_image:
+            return f"{request.scheme}://{request.get_host()}/api/authors/{obj.id}/profile_image"
         
         return None
     

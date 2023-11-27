@@ -1,6 +1,6 @@
 from django.urls import path
 
-from ..views import users, authors, posts, comments, likes, follows,friend_request
+from ..views import users, authors, posts, comments, likes, follows,friend_request, image
 
 urlpatterns = [
     # insite apis
@@ -11,7 +11,7 @@ urlpatterns = [
     path('authors/', authors.AuthorListLocal.as_view(), name='author_list_local'),
     path('authors/<uuid:author_id>', authors.AuthorDetailLocal.as_view(), name='author_detail'),
     path('authors/<uuid:author_id>/followers', follows.FollowerListLocal.as_view(), name='follower_list_local'),
-    
+    path('authors/<uuid:author_id>/profile_image', image.ProfileImage.as_view(), name='profile_image'),
     path('followers/', follows.FollowerListLocal.as_view(), name='follower_list_local'),
     path('followings/', follows.FollowingListLocal.as_view(), name='following_list_local'),
     
@@ -25,4 +25,5 @@ urlpatterns = [
     path('posts/<uuid:post_id>/likes', likes.LikePostListLocal.as_view(), name='like_post_list_local'),
     path('posts/<uuid:post_id>/comments/', comments.CommentListLocal.as_view(), name='comment_list_local'),   
     path('posts/<uuid:post_id>/comments/<uuid:comment_id>/likes', likes.LikeCommentListLocal.as_view(), name='like_comment_list_local'),
+    path('posts/<uuid:post_id>/image', image.PostImage.as_view(), name='post_image'),
 ]

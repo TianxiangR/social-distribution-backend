@@ -6,7 +6,7 @@ import uuid
 # Create your models here.
 class User(AbstractUser):
     id = models.UUIDField(primary_key=True, unique=True, editable=False, default=uuid.uuid4)
-    profile_image = models.ImageField(upload_to=MEDIA_URL, null=True, blank=True)
+    profile_image = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_server = models.BooleanField(default=False)
     github = models.URLField(null=True, blank=True)
@@ -27,7 +27,7 @@ class Post(models.Model):
     origin = models.URLField()
     source = models.URLField()
     unlisted = models.BooleanField(default=False)
-    image = models.ImageField(upload_to=MEDIA_URL, null=True, blank=True)
+    image = models.TextField(null=True, blank=True)
     is_foreign = models.BooleanField(default=False)
 
 
