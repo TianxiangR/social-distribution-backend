@@ -9,7 +9,12 @@ from ..api_lookup import API_LOOKUP
 from ..server_adapters.base_server_adapter import BaseServerAdapter
 from ..utils import get_author_id_from_url
 from rest_framework.exceptions import ParseError
+from drf_spectacular.utils import extend_schema
 
+@extend_schema(
+    description="Get a list of authors from the server",
+    responses={200: AuthorListRemoteSerializer}
+)
 class AuthorListRemote(GenericAPIView):
     authentication_classes = [BasicAuthentication]
     permission_classes = [IsAuthenticated]
@@ -22,7 +27,10 @@ class AuthorListRemote(GenericAPIView):
         serializer = self.get_serializer(users, context = {'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
+@extend_schema(
+    description="Get the author information from the server by id",
+    responses={200: AuthorRemoteSerializer}
+)
 class AuthorDetailRemote(GenericAPIView):
   authentication_classes = [BasicAuthentication]
   permission_classes = [IsAuthenticated]

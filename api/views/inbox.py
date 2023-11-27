@@ -1,5 +1,5 @@
 from api.models import User, Post, InboxItem, FriendRequest, LikePost, LikeComment, Comment, Follow
-from api.serializer import InboxSerializer
+from api.serializer import InboxSerializer, AuthorRemoteSerializer, InboxRequestSerializer
 from rest_framework.generics import GenericAPIView, get_object_or_404
 from rest_framework.authentication import TokenAuthentication, BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
@@ -8,6 +8,8 @@ from rest_framework import status
 from ..utils import get_or_create_user, is_comment_detail_url,  get_post_id_from_url, get_comment_id_from_url, is_post_detail_url, create_or_update_shared_post_from_request_data, create_comment_from_request_data, is_uuid
 import json
 from datetime import datetime
+from drf_spectacular.utils import extend_schema, inline_serializer
+
 
 def handleInbox(receiver_obj, request_data):
   type = request_data.get('type', None)
@@ -66,6 +68,10 @@ def handleInbox(receiver_obj, request_data):
   return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    description="Get the inbox of the author",
+    request=InboxRequestSerializer(),
+)
 class InboxListRemote(GenericAPIView):
     authentication_classes = [BasicAuthentication]
     permission_classes = [IsAuthenticated]

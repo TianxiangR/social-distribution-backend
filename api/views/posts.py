@@ -12,8 +12,12 @@ from .inbox import handleInbox
 from urllib3.util import parse_url
 from ..api_lookup import API_LOOKUP
 from ..utils import get_author_id_from_url
+from drf_spectacular.utils import extend_schema
 
-
+@extend_schema(
+    description="Get a list of public posts of an author from the server",
+    responses={200: PostListSerializer}
+)
 class PostListRemote(GenericAPIView):
     authentication_classes = [BasicAuthentication]
     permission_classes = [IsAuthenticated]
@@ -78,14 +82,18 @@ class PostListLocal(GenericAPIView):
     post_data = request.data
     post_id = uuid.uuid4()
     post_data['author'] = author.id
-    post_data['source'] = f"{request.scheme}://{request.get_host()}/authors/{author.id}/posts/{post_id}"
-    post_data['origin'] = post_data['source']
+
     post_data['id'] = post_id
     
     serializer = PostSerializer(data=post_data, context = {'request': request})
     if serializer.is_valid():
       serializer.save()
       instance = serializer.instance
+      update_data = {
+        "origin": f"{request.scheme}://{request.get_host()}/author/{author.id}/posts/{post_id}",
+        "source": f"{request.scheme}://{request.get_host()}/author/{author.id}/posts/{post_id}",
+      }
+      serializer = PostSerializer(instance, data=update_data, partial=True, context = {'request': request})
       object = PostDetailRemoteSerializer(instance, context={'request': request}).data
       request_data = {
         "@context": "https://www.w3.org/ns/activitystreams",
