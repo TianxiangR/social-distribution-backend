@@ -1,90 +1,159 @@
-from .models import User, Post, PostAccessPermission, Notification
+from .models import User, Post, Comment, PostAccess
 from rest_framework.generics import get_object_or_404
-from .models import Follow
-from django.http import HttpResponseBadRequest
+from rest_framework.exceptions import ParseError
 import uuid
+import re
+from datetime import datetime
 
-def get_friends(user):
-  user_followers_query = user.follower_relations.all()
-  user_following_query = user.following_relations.all()
+def is_comment_detail_url(url):
+  return re.search(r'^https?:\/\/.+\/authors\/([0-9|a-z|]{8}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{12})\/posts\/([0-9|a-z|]{8}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{12})\/comments/([0-9|a-z|]{8}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{12})$', url) is not None \
+    or re.search(r'^https?:\/\/.+\/authors\/([0-9|a-z|]{32})\/posts\/([0-9|a-z|]{32})\/comments\/([0-9|a-z|]{32})$', url) is not None
   
-  user_followers_id = [user_follower.follower.id for user_follower in user_followers_query]
-  user_following_id = [user_following.following.id for user_following in user_following_query]
   
-  # object filter using list of keywords: https://stackoverflow.com/questions/5956391/django-objects-filter-with-list
-  user_followers = User.objects.filter(id__in=user_followers_id)
-  user_followings = User.objects.filter(id__in=user_following_id)
-  
-  friends = [user_follower for user_follower in user_followers if user_follower in user_followings]
-  
-  return friends
-  
-
-def get_visible_posts(user):
-  myPosts = Post.objects.filter(author=user.id)
-  public_posts = Post.objects.filter(visibility='public')
-  friends = get_friends(user)
-  friends_ids = [friend.id for friend in friends]
-  friend_only_posts = Post.objects.filter(author__in=friends_ids, visibility='friend-only')   
-  posts = set(myPosts | public_posts | friend_only_posts)        
-  access_permissions = user.post_access_permissions.all()
-
-  for access_permission in access_permissions:
-      access_permission_post = access_permission.post
-      posts.add(access_permission_post)
-      
-  return posts
+def is_post_detail_url(url):
+  return re.search(r"^https?:\/\/.+\/authors\/([0-9|a-z|]{8}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{12})\/posts\/([0-9|a-z|]{8}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{12})$", url) is not None \
+    or re.search(r"^https?:\/\/.+\/authors\/([0-9|a-z|]{32})\/posts\/([0-9|a-z|]{32})$", url) is not None
 
 
-def has_access_to_post(user, post):
-  if post.visibility == 'public':
+def is_uuid(str):
+  try:
+    uuid.UUID(str)
     return True
-  elif post.visibility == 'friend-only':
-    friends = get_friends(user)
-    return post.author in friends
+  except:
+    return False
+
+  
+def get_post_id_from_url(url):
+  result =  re.search("posts\/([0-9|a-z|]{8}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{12})", url)
+  if result is None:
+    result = re.search("posts\/([0-9|a-z|]{32})", url)
+    if result is None:
+      raise ParseError("Invalid post url")
+  uuid_str = result.group(1)
+  return str(uuid.UUID(uuid_str))
+
+
+def get_author_id_from_url(url):
+  result =  re.search("authors\/([0-9|a-z|]{8}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{12})", url)
+  if result is None:
+    result = re.search("authors\/([0-9|a-z|]{32})", url)
+    if result is None:
+      raise ParseError("Invalid author url")
+  uuid_str = result.group(1)
+  return str(uuid.UUID(uuid_str))
+
+
+def get_comment_id_from_url(url):
+  result = re.search("comments\/([0-9|a-z|]{8}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{12})", url)
+  if result is None:
+    result = re.search("comments\/([0-9|a-z|]{32})", url)
+    if result is None:
+      raise ParseError("Invalid comment url")
+  uuid_str = result.group(1)
+  return str(uuid.UUID(uuid_str))
+
+
+def get_or_create_user(obj):
+  if is_uuid(obj["id"]):
+    id = obj["id"]
   else:
-    access_permissions = user.post_access_permissions.all()
-    return post in [access_permission.post for access_permission in access_permissions]
+    id = get_author_id_from_url(obj["id"])
+  if User.objects.filter(id=id).exists():
+    return User.objects.get(id=id)
+  else:
+    user = User.objects.create(
+      id=id,
+      username=obj["displayName"],
+      email="default@email.com",
+      password="default",
+      host = obj["host"],
+      url = obj["url"],
+      github = obj["github"],
+      is_foreign = True,
+      image_url = obj["profileImage"]
+    )
+    user.save()
+    return user
+  
+  
+def create_comment_from_request_data(request_data, post_obj):
+  author = request_data.get('author', None)
+  author_obj = get_or_create_user(author)
+  comment = request_data.get('comment', None)
+  published = request_data.get('published', None)
+  id = request_data.get('id', None)
+  if is_uuid(id):
+    comment_id = id
+  else:
+    comment_id = get_comment_id_from_url(id)
+  created_at = datetime.strptime(published, '%Y-%m-%dT%H:%M:%S.%f%z')
+  
+  if not Comment.objects.filter(id=comment_id).exists():
+    comment_obj = Comment.objects.create(id=comment_id, post=post_obj, user=author_obj, content=comment, created_at=created_at)
+  else:
+    comment_obj = Comment.objects.get(id=comment_id)
+  return comment_obj
 
 
-def create_access_permission(user, post):
-  author = post.author
-  try:
-    author_follow_relation = Follow.objects.get(follower=author, following=user)
-    target_follow_relation = Follow.objects.get(follower=user, following=author)
-    PostAccessPermission.objects.create(user=user, post=post, author_follow_relation=author_follow_relation, target_follow_relation=target_follow_relation)
-  except Follow.DoesNotExist:
-    raise HttpResponseBadRequest('User {} is not following {}'.format(user.username, author.username))
+def create_or_update_shared_post_from_request_data(request_data, receiver_obj):
+  id = request_data.get('id', None)
+  title = request_data.get('title', None)
+  source = request_data.get('source', None)
+  origin = request_data.get('origin', None)
+  contentType = request_data.get('contentType', None)
+  content = request_data.get('content', None)
+  author = request_data.get('author', None)
+  visibility = request_data.get('visibility', None)
+  unlisted = request_data.get('unlisted', None)
+  published = request_data.get('published', None)
+  commentsSrc = request_data.get('commentsSrc', None)
+  comments = []
+  if commentsSrc is not None:
+    comments = commentsSrc.get('comments', [])
+  if is_uuid(id):
+    post_id = id
+  else:
+    post_id = get_post_id_from_url(id)
   
-
-def update_access_permission(post, new_permitted_user_list):
-  previous_access_permissions = post.post_access_permissions.all()
-  removed_access_permissions = [access_permission for access_permission in previous_access_permissions if access_permission.user not in new_permitted_user_list]
-  new_access_permissions = [user for user in new_permitted_user_list if user not in [access_permission.user for access_permission in previous_access_permissions]]
   
-  for access_permission in removed_access_permissions:
-    access_permission.delete()
-  
-  for user in new_access_permissions:
-    create_access_permission(user, post)
-    Notification.objects.create(user=user, author=post.author, post=post, type='SHARE_POST')
+  post_obj = None
+  if Post.objects.filter(id=post_id).exists():
+    post_obj = Post.objects.get(id=post_id)
     
+    # don't update local post as we always have the latest version of the local post
+    if post_obj.is_foreign:
+      post_obj.title = title
+      post_obj.source = source
+      post_obj.origin = origin
+      post_obj.contentType = contentType
+      post_obj.content = content
+      post_obj.visibility = visibility
+      post_obj.unlisted = unlisted
+      post_obj.created_at = datetime.strptime(published, '%Y-%m-%dT%H:%M:%S.%f%z')
+      post_obj.save()
+  
+  else:
+    author_obj = get_or_create_user(author)
+    is_foreign = author_obj.is_foreign
+    post_obj = Post.objects.create(id=post_id, title=title, source=source, origin=origin, content=content, contentType=contentType, author=author_obj, visibility=visibility, unlisted=unlisted, created_at=datetime.strptime(published, '%Y-%m-%dT%H:%M:%S.%f%z'), is_foreign=is_foreign)
+    post_obj.save()
+  
+  if not PostAccess.objects.filter(post=post_obj, user=receiver_obj).exists():
+    PostAccess.objects.create(post=post_obj, user=receiver_obj)
+    
+  for comment in comments:
+    create_comment_from_request_data(comment, post_obj)
+  
+  return post_obj
 
-def has_access_to_comment(user, comment):
-  if comment.post.visibility == 'public':
+
+def has_access_to_post(post_obj, user_obj):
+  if post_obj.visibility == "PUBLIC":
     return True
-  
-  # post author's comment can be seen by everyone who has access to the post
-  # users that are not the author of the post can see their own comments and the post author's comment
-  return comment.post.author == user or comment.user == user or comment.post.author == comment.user
-
-
-def get_foreign_author_or_create(author):
-  author_id = author.get('id', None)
-  try:
-    author = User.objects.get(id=author_id)
-  except User.DoesNotExist:
-    author = User.objects.create_user(id=uuid.uuid4(), username=author['displayName'], password='password', host=author['host'], is_foreign=True, foreign_profile_image=author['profileImage']) 
-    author.save()
-  return author
-    
+  elif post_obj.visibility == "PRIVATE" or post_obj.visibility == "FRIENDS":
+    if PostAccess.objects.filter(post=post_obj, user=user_obj).exists():
+      return True
+    elif post_obj.author.id == user_obj.id:
+      return True
+ 
+  return False

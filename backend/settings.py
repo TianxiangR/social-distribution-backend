@@ -100,12 +100,26 @@ AUTH_USER_MODEL = 'api.User'
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if os.getenv('DB_PASSWORD', None):
+    print("Using postgresql")
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            'NAME': 'dbee9cvinq8iq6',
+            'USER': 'ecdyzgwmsrouwj',
+            'PASSWORD': os.getenv('DB_PASSWORD'),
+            'HOST': 'ec2-44-193-237-184.compute-1.amazonaws.com',
+            'PORT': '5432',
+        }
     }
-}
+else:
+    print("Using sqlite3")
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -125,6 +139,21 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+}
 
 
 # Internationalization

@@ -1,138 +1,174 @@
-import uuid
-from ..models import User, Post, LikePost, Notification
-from ..serializers.insite_serializers import PostSerializer, LikePostSerializer, PostListItemSerializer, PostDetailSerializer
-from rest_framework.authtoken.models import Token
-from rest_framework.authentication import TokenAuthentication
+from api.models import User, Post
+from api.serializer import  PostDetailRemoteSerializer, PostListSerializer, PostBriefListSerializer, PostSerializer, PostDetailLocalSerializer, AuthorRemoteSerializer
+from rest_framework.generics import GenericAPIView
+from rest_framework.authentication import BasicAuthentication, TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.generics import GenericAPIView, get_object_or_404
 from rest_framework import status
-from drf_spectacular.utils import extend_schema
-from ..utils import get_friends, get_visible_posts, update_access_permission, create_access_permission
-from .permissions import IsPostOwnerOrReadOnly, IsPostModifyPermissionOwner
+from ..utils import has_access_to_post
+import uuid
+from datetime import datetime
+from .inbox import handleInbox
+from urllib3.util import parse_url
+from ..api_lookup import API_LOOKUP
 
-# TO-DO: add auth tokens to all endpoints from login
 
-class PostList(GenericAPIView):
-    authentication_classes = [TokenAuthentication]
+class PostListRemote(GenericAPIView):
+    authentication_classes = [BasicAuthentication]
     permission_classes = [IsAuthenticated]
-    queryset = Post.objects.all()
-    serializer_class = PostSerializer
+    queryset = Post.objects.filter(visibility="PUBLIC")
+    serializer_class = PostListSerializer
     
-    @extend_schema(
-        responses={200: PostListItemSerializer(many=True)}
-    )
+    
     def get(self, request, **kwargs):
-        user = Token.objects.get(key=request.auth).user
-        posts = get_visible_posts(user)
-        serializer = PostListItemSerializer(posts, many=True, context={'request': request})
-        return Response(serializer.data)
-    
-    @extend_schema(
-        request=PostSerializer,
-        responses={201: PostSerializer, 400: None}
-    )
-    def post(self, request, **kwargs):
-        user = Token.objects.get(key=request.auth).user
-        new_data = request.data
-        new_data['author'] = user.id
-        post_id = uuid.uuid4()
-        new_data['id'] = post_id
-        new_data['origin'] = f'{request.scheme}://{request.get_host()}/author/{user.id}/posts/{post_id}'
-        new_data['source'] = new_data['origin']
-        serializer = self.get_serializer(data=new_data)
-        if serializer.is_valid():
-            if new_data.get('visibility', 'public') == 'private' and not 'allowed_users' in new_data:
-                return Response(status=status.HTTP_400_BAD_REQUEST, data={'message': 'allowed_users field is required for private posts'})
-            
-            allowed_user_ids = new_data.get('allowed_users', [])
-            post = serializer.save()
-            update_access_permission(post, allowed_user_ids)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
-
-class PostDetail(GenericAPIView):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated, IsPostOwnerOrReadOnly]
-    queryset = Post.objects.all()
-    serializer_class = PostSerializer
-    lookup_url_kwarg = 'post_id'
-     
-    @extend_schema(
-        responses={200: PostDetailSerializer, 404: None}
-    )
-    def get(self, request, **kwargs):
-        post = self.get_object()
-        self.check_object_permissions(request, post)
-        serializer = PostDetailSerializer(post, context={'request': request})
-        return Response(serializer.data)
-    
-    @extend_schema(
-        responses={200: None, 404: None}
-    )
-    def delete(self, request, **kwargs):
-        post = self.get_object()
-        self.check_object_permissions(request, post)
-        post.delete()
-        return Response({'message': 'Post deleted successfully'}, status=200)
-    
-    @extend_schema(
-        request=PostSerializer,
-        responses={200: PostSerializer, 400: None, 404: None}
-    )
-    def put(self, request, **kwargs):
-        user = Token.objects.get(key=request.auth).user
-        post = self.get_object()
-        self.check_object_permissions(request, post)
-        new_data = request.data
-        new_data['author'] = user.id
-        serializer = self.get_serializer(post, data=new_data, partial=True)
-        allowed_user_ids = new_data.get('allowed_users', [])
-        allowed_users = User.objects.filter(id__in=allowed_user_ids)
-        update_access_permission(post, allowed_users)
-    
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
-
-class PostLikeList(GenericAPIView):
-        authentication_classes = [TokenAuthentication]
-        permission_classes = [IsAuthenticated, IsPostModifyPermissionOwner]
-        queryset = LikePost.objects.all()
-        serializer_class = LikePostSerializer
-        lookup_url_kwarg = 'post_id'
+        posts = self.get_queryset()
+        serializer = self.get_serializer(posts, context = {'request': request})
+        data = serializer.data
         
-        @extend_schema(
-            responses={200: LikePostSerializer(many=True)}
-        )
-        def post(self, request, **kwargs):
-            post = get_object_or_404(Post, id=kwargs['post_id'])
-            self.check_object_permissions(request, post)
-            user = Token.objects.get(key=request.auth).user
-            like_body = request.data
-            like_body['user'] = user.id
-            like_body['post'] = post.id
-            
-            serializer = self.get_serializer(data=like_body)
-            if serializer.is_valid():
-                serializer.save()
-                Notification.objects.create(user=post.author, author=user, post=post, type='LIKE_POST')
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(status=400, data=serializer.errors)
+        for post in data["items"]:
+          post["commentsSrc"]["comments"].sort(key=lambda x: datetime.strptime(x["published"], '%Y-%m-%dT%H:%M:%S.%f%z'), reverse=True)
         
-        @extend_schema(
-            responses={200: None, 400: None, 404: None}
-        )   
-        def delete(self, request, **kwargs):
-            post = get_object_or_404(Post, id=kwargs['post_id'])
-            self.check_object_permissions(request, post)
-            user = Token.objects.get(key=request.auth).user
-            query_result = LikePost.objects.filter(user=user.id, post=post.id)
-            if not query_result.exists():
-                return Response({'message': 'User has not liked post'}, status=status.HTTP_400_BAD_REQUEST)
-            post.likes -= 1
-            post.save()
-            query_result.delete()
-            return Response({'message': 'Like deleted successfully'}, status=200)
+        data["items"].sort(key=lambda x: datetime.striptime(x["published"], '%Y-%m-%dT%H:%M:%S.%f%z'), reverse=True)
+          
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+class PostDetailRemote(GenericAPIView):
+  authentication_classes = [BasicAuthentication]
+  permission_classes = [IsAuthenticated]
+  lookup_url_kwarg = 'post_id'
+  queryset = Post.objects.filter(visibility="PUBLIC")
+  serializer_class = PostDetailRemoteSerializer
+  
+
+  def get(self, request, **kwargs):
+    post = self.get_object()
+    if post.visibility == 'PUBLIC':
+        serializer = self.get_serializer(post)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    return Response(status=status.HTTP_404_NOT_FOUND)
+  
+  
+class PostListLocal(GenericAPIView):
+  authentication_classes = [TokenAuthentication]
+  permission_classes = [IsAuthenticated]
+  queryset = Post.objects.all()
+  serializer_class = PostBriefListSerializer
+  
+  
+  def get(self, request, **kwargs):
+    requester = request.user
+    posts = self.get_queryset()
+    accessible_posts = []
+    
+    for post in posts:
+      if has_access_to_post(post, requester):
+        accessible_posts.append(post)
+        
+    serializer = self.get_serializer(accessible_posts, context = {'request': request})
+    serializer.data["items"].sort(key=lambda x: datetime.strptime(x["published"], '%Y-%m-%dT%H:%M:%S.%f%z'), reverse=True)
+    
+    return Response(serializer.data, status=status.HTTP_200_OK)
+  
+  
+  def post(self, request, **kwargs):
+    author = request.user
+    post_data = request.data
+    post_id = uuid.uuid4()
+    post_data['author'] = author.id
+    post_data['source'] = f"{request.scheme}://{request.get_host()}/authors/{author.id}/posts/{post_id}"
+    post_data['origin'] = post_data['source']
+    post_data['id'] = post_id
+    
+    serializer = PostSerializer(data=post_data, context = {'request': request})
+    if serializer.is_valid():
+      serializer.save()
+      instance = serializer.instance
+      for user in User.objects.filter(is_server=False, is_superuser=False):
+        if user.id != author.id and has_access_to_post(instance, user):
+          receiver_obj = user
+          object = PostDetailRemoteSerializer(instance, context={'request': request}).data
+          request_data = {
+            "@context": "https://www.w3.org/ns/activitystreams",
+            "summary": f"{author.username} shared a post with you",
+            "author": AuthorRemoteSerializer(author, context={'request': request}).data,
+            "object": object,
+          }
+          if not user.is_foreign:
+            try:
+              handleInbox(receiver_obj, request_data)
+            except:
+              pass
+          else:
+            user_host = parse_url(user.host).host
+            if user_host in API_LOOKUP:
+              adapter = API_LOOKUP[user_host]
+              adapter.request_post_author_inbox(user.id, request_data)
+      return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+class PostDetailLocal(GenericAPIView):
+  authentication_classes = [TokenAuthentication]
+  permission_classes = [IsAuthenticated]
+  queryset = Post.objects.all()
+  serializer_class = PostDetailLocalSerializer
+  lookup_url_kwarg = 'post_id'
+  
+  
+  def get(self, request, **kwargs):
+    requester = request.user
+    post = self.get_object()
+    if has_access_to_post(post, requester):
+      serializer = self.get_serializer(post, context = {'request': request})
+      serializer.data["commentsSrc"]["comments"].sort(key=lambda x: datetime.strptime(x["published"], '%Y-%m-%dT%H:%M:%S.%f%z'), reverse=True)
+      return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    return Response(status=status.HTTP_404_NOT_FOUND)
+  
+  
+  def put(self, request, **kwargs):
+    requester = request.user
+    post = self.get_object()
+    if post.author == requester:
+      serializer = PostSerializer(post, data=request.data, context = {'request': request})
+      if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+      
+      return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    return Response(status=status.HTTP_404_NOT_FOUND)
+  
+  
+  def patch(self, request, **kwargs):
+    requester = request.user
+    post = self.get_object()
+    if post.author == requester:
+      serializer = PostSerializer(post, data=request.data, partial=True, context = {'request': request})
+      if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+      
+      return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    return Response(status=status.HTTP_404_NOT_FOUND)
+  
+  
+  def delete(self, request, **kwargs):
+    requester = request.user
+    post = self.get_object()
+    if post.author == requester:
+      post.delete()
+      return Response(status=status.HTTP_200_OK)
+    
+    return Response(status=status.HTTP_404_NOT_FOUND)
+  
+
+
+
+
+
 

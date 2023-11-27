@@ -1,8 +1,8 @@
 from django.contrib.auth import authenticate
-from ..models import User, LikePost
+from api.models import User
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
-from ..serializers.insite_serializers import LikePostSerializer, UserSerializer, UserInfoSerializer
+from api.serializer import  UserSerializer,  AuthorRemoteSerializer
 from rest_framework.authtoken.models import Token
 from drf_spectacular.utils import extend_schema
 from rest_framework.generics import GenericAPIView
@@ -27,56 +27,12 @@ def signup(request):
             return JsonResponse({'message': 'Signup successful'}, status=200)
         else:
             return JsonResponse(serializer.errors, status=400)
-        
+
+
 @extend_schema(
     responses={200: UserSerializer(many=True), 404: None}
 )
 
-class UserList(GenericAPIView):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    
-    def get(self, request, **kwargs):
-        users = User.objects.all()
-        serializer = UserInfoSerializer(users, many=True, context={'request': request})
-        
-        returned_users = []
-        # remove current user from list
-        for user in serializer.data:
-            # turn uuid into string for comparison
-            if str(user['id']) != str(request.user.id):
-                returned_users.append(user)
-                
-        return Response(returned_users, status=status.HTTP_200_OK)
-    
-class UserDetail(GenericAPIView):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    lookup_url_kwarg = 'user_id'
-    
-    def get(self, request, **kwargs):
-        user = self.get_object()
-        serializer = UserInfoSerializer(user, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
-    def post(self, request, **kwargs):
-        user = self.get_object()
-        serializer = UserSerializer(user, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return JsonResponse({'message': 'User updated successfully'}, status=200)
-        else:
-            return JsonResponse(serializer.errors, status=400)
-        
-    def delete(self, request, **kwargs):
-        user = self.get_object()
-        user.delete()
-        return JsonResponse({'message': 'User deleted successfully'}, status=200)
-        
 @api_view(['POST'])
 def update_password(request, pk):
     if request.method == "POST":
@@ -87,6 +43,7 @@ def update_password(request, pk):
             return JsonResponse({'message': 'Password updated successfully'}, status=200)
         except User.DoesNotExist:
             return JsonResponse({'message': 'User does not exist'}, status=404)
+
 
 @extend_schema(
     request=dict,
@@ -103,14 +60,3 @@ def signin(request):
             return JsonResponse({'token': token.key, 'message': 'Login successful', 'user_id': user.id}, status=200)
         else:
             return JsonResponse({'message': 'Login unsuccessful'}, status=400)
-
-@api_view(['GET'])
-def get_likes_for_user(request, pk):
-    if request.method == "GET":
-        try:
-            user = User.objects.get(id=pk)
-        except User.DoesNotExist:
-            return JsonResponse({'message': 'User does not exist'}, status=200)
-        likes = LikePost.objects.filter(user=user)
-        serializer = LikePostSerializer(likes, many=True)
-        return JsonResponse(serializer.data, safe=False)

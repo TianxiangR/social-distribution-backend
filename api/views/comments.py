@@ -1,125 +1,108 @@
-from ..models import Comment, Post, LikeComment, Notification
-from ..serializers.insite_serializers import CommentSerializer, LikeCommentSerializer,CommentDetailSerializer
-from rest_framework.authtoken.models import Token
-from rest_framework.authentication import TokenAuthentication
+from api.models import User, Post, Comment
+from api.serializer import CommentDetailRemoteSerializer, CommentListRemoteSerializer, CommentListLocalSerializer, CommentSerializer, AuthorRemoteSerializer
+from rest_framework.generics import GenericAPIView, get_object_or_404
+from rest_framework.authentication import TokenAuthentication, BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.generics import GenericAPIView, get_object_or_404
 from rest_framework import status
-from drf_spectacular.utils import extend_schema
-from .permissions import IsPostModifyPermissionOwner, IsCommentOwnerOrReadOnly, IsCommentModifyPermissionOwner
+from ..utils import has_access_to_post
+from urllib3.util import parse_url
+from ..api_lookup import API_LOOKUP
+from .inbox import handleInbox
 
 
-# TO-DO: add auth tokens to all endpoints from login
-class CommentList(GenericAPIView):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated, IsPostModifyPermissionOwner]
-    queryset = Comment.objects.all()
-    serializer_class = CommentSerializer
+class CommentListRemote(GenericAPIView):
+    authentication_classes = [BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+    lookup_url_kwarg = 'post_id'
+    queryset = Post.objects.all().filter(visibility="PUBLIC")
+    serializer_class = CommentListRemoteSerializer
     
-    @extend_schema(
-        responses={200: CommentDetailSerializer(many=True), 404: None}
-    )
+    
     def get(self, request, **kwargs):
-        post = get_object_or_404(Post, id=kwargs['post_id'])
-        self.check_object_permissions(request, post)
-        comments = Comment.objects.filter(post=post.id)
-        serializer = CommentDetailSerializer(comments, many=True, context={'request': request})
-        return Response(serializer.data)
+        post = self.get_object()
+        serializer = self.get_serializer(post.comments.all(), context = {'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
     
-    @extend_schema(
-        request=CommentSerializer,
-        responses={201: CommentDetailSerializer, 400: None, 404: None}
-    )
-    def post(self, request, **kwargs):
-        user = Token.objects.get(key=request.auth).user
-        post = get_object_or_404(Post, id=kwargs['post_id'])
-        self.check_object_permissions(request, post)
-        new_data = request.data
-        new_data['user'] = user.id
-        new_data['post'] = post.id
-        serializer = self.get_serializer(data=new_data)
+    
+class CommentDetailRemote(GenericAPIView):
+  authentication_classes = [BasicAuthentication]
+  permission_classes = [IsAuthenticated]
+  lookup_url_kwarg = 'post_id'
+  queryset = Post.objects.all().filter(visibility="PUBLIC")
+  serializer_class = CommentDetailRemoteSerializer
+  
+  
+  def get(self, request, **kwargs):
+    post = self.get_object()
+    comment_id = kwargs.get('comment_id')
+    comment = post.comments.filter(id=comment_id).first()
+    if comment:
+        serializer = self.get_serializer(comment)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    return Response(status=status.HTTP_404_NOT_FOUND)
+  
+  
+class CommentListLocal(GenericAPIView):
+  authentication_classes = [TokenAuthentication]
+  permission_classes = [IsAuthenticated]
+  lookup_url_kwarg = 'post_id'
+  queryset = Post.objects.all()
+  serializer_class = CommentListLocalSerializer
+  
+  
+  def get(self, request, **kwargs):
+    requester = request.user
+    post = self.get_object()
+    comments = post.comments.all()
+    accessible_comments = []
+    
+    if has_access_to_post(post, requester):
+      for comment in comments:
+        if comment.user == requester or comment.user == post.author or post.visibility == "PUBLIC":
+          accessible_comments.append(comment)
+    
+    serializer = self.get_serializer(accessible_comments, context = {'request': request})
+    
+    return Response(serializer.data, status=status.HTTP_200_OK)
+  
+  
+  def post(self, request, **kwargs):
+    requester = request.user
+    post = self.get_object()
+    if has_access_to_post(post, requester):
+      comment = request.data.get('comment', None)
+      if comment:
+        comment_data = {
+          "user": requester.id,
+          "content": comment,
+          "post": post.id,
+        }
+        
+        serializer = CommentSerializer(data=comment_data)
         if serializer.is_valid():
-            serializer.save()
-            comment_detail_serializer = CommentDetailSerializer(serializer.instance, context={'request': request})
-            if post.author != user:
-                Notification.objects.create(author=user, user=post.author, post=post, comment=serializer.instance, type='COMMENT_POST')
-            return Response(comment_detail_serializer.data, status=status.HTTP_201_CREATED)
-        return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
-
-class CommentDetail(GenericAPIView):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated, IsCommentOwnerOrReadOnly]
-    queryset = Comment.objects.all()
-    serializer_class = CommentSerializer
-    lookup_url_kwarg = 'comment_id'
+          serializer.save()
+          request_data = {
+            "@context": "https://www.w3.org/ns/activitystreams",
+            "type": "comment",
+            "author": AuthorRemoteSerializer(requester, context={'request': request}).data,
+            "object": CommentDetailRemoteSerializer(serializer.instance, context={'request': request}).data,
+          }
+          if not post.is_foreign:
+            handleInbox(post.author, request_data)
+          else:
+            post_author_host = parse_url(post.author.host).host
+            if post_author_host in API_LOOKUP:
+              adapter = API_LOOKUP[post_author_host]
+              adapter.request_post_author_inbox(post.author.id, request_data)
+          return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+          return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+      else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
     
-    @extend_schema(
-        responses={200: CommentDetailSerializer, 404: None}
-    )
-    def get(self, request, **kwargs):
-        comment = self.get_object()
-        self.check_object_permissions(request, comment)
-        serializer = CommentDetailSerializer(comment, context={'request': request})
-        return Response(serializer.data)
-    
-    @extend_schema(
-        request=CommentSerializer,
-        responses={200: CommentDetailSerializer, 400: None, 404: None}
-    )
-    def put(self, request, **kwargs):
-        user = Token.objects.get(key=request.auth).user
-        comment = self.get_object()
-        self.check_object_permissions(request, comment)
-        new_data = request.data
-        new_data['user'] = user.id
-        serializer = self.get_serializer(comment, data=new_data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
-    
-    @extend_schema(
-        responses={200: None, 404: None}
-    )
-    def delete(self, request, **kwargs):
-        comment = self.get_object()
-        self.check_object_permissions(request, comment)
-        comment.delete()
-        return Response({'message': 'Comment deleted successfully'}, status=200)
-    
-class LikeCommentList(GenericAPIView):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated, IsCommentModifyPermissionOwner]
-    queryset = LikeComment.objects.all()
-    serializer_class = LikeCommentSerializer
-    
-    @extend_schema(
-        request=None,
-        responses={200: LikeCommentSerializer(many=True), 404: None}
-    )
-    def post(self, request, **kwargs):
-        user = Token.objects.get(key=request.auth).user
-        comment = get_object_or_404(Comment, id=kwargs['comment_id'])
-        self.check_object_permissions(request, comment)
-        new_data = request.data
-        new_data['user'] = user.id
-        new_data['comment'] = comment.id
-        serializer = self.get_serializer(data=new_data)
-        if serializer.is_valid():
-            serializer.save()
-            if comment.user != user:
-                Notification.objects.create(author=user, user=comment.user, comment=comment, post=comment.post, type='LIKE_COMMENT')
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
-
-    @extend_schema(
-        responses={200: None, 404: None}
-    )
-    def delete(self, request, **kwargs):
-        user = Token.objects.get(key=request.auth).user
-        comment = get_object_or_404(Comment, id=kwargs['comment_id'])
-        self.check_object_permissions(request, comment)
-        like = get_object_or_404(LikeComment, user=user.id, comment=comment.id)
-        like.delete()
-        return Response({'message': 'Like deleted successfully'}, status=200)
+    return Response(status=status.HTTP_403_FORBIDDEN)
+        
+        
+        
