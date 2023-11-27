@@ -82,8 +82,8 @@ class PostListLocal(GenericAPIView):
     post_data = request.data
     post_id = uuid.uuid4()
     post_data['author'] = author.id
-
-    post_data['id'] = post_id
+    post_data['origin'] = f"{request.scheme}://{request.get_host()}/author/{author.id}/posts/{post_id}"
+    post_data['source'] = f"{request.scheme}://{request.get_host()}/author/{author.id}/posts/{post_id}"
     
     serializer = PostSerializer(data=post_data, context = {'request': request})
     if serializer.is_valid():
