@@ -201,6 +201,27 @@ class PostSerializer(serializers.ModelSerializer):
         fields = '__all__'
         
 
+@extend_schema_serializer(examples=[
+    OpenApiExample(
+        name='comment_detail',
+        value={
+        "type": "comment",
+        "author": {
+            "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+            "type": "author",
+            "url": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+            "host": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/",
+            "displayName": "testaccount",
+            "profileImage": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/api/authors/465f0c29-690e-4960-96b4-98341eb29fca/profile_image",
+            "github": "https://github.com/TianxiangR"
+        },
+        "comment": "leaving a comment",
+        "contentType": "text/plain",
+        "published": "2023-11-26T23:43:41.724706+00:00",
+        "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca/posts/17cbff5b-8737-4de7-b696-d169f57fd094/comments/f83d2186-f873-45a7-a11b-4eef5d5c7a40"
+        }
+    )
+])
 class CommentDetailRemoteSerializer(serializers.Serializer):
     type = serializers.SerializerMethodField()
     author = serializers.SerializerMethodField()
@@ -341,8 +362,44 @@ class PostBriefLocalSerializer(PostBriefSerializer):
         return None
     
 
-
-
+@extend_schema_serializer(examples=[
+    OpenApiExample(
+        name='post_detail',
+        value={
+            "type": "post",
+            "title": "a public post",
+            "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca/posts/a3aadcaf-1d3c-44cc-8b68-5ead89c82aa7",
+            "origin": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/author/465f0c29-690e-4960-96b4-98341eb29fca/posts/ffcc43e3-35d6-42e7-8e18-92543329b257",
+            "source": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/author/465f0c29-690e-4960-96b4-98341eb29fca/posts/ffcc43e3-35d6-42e7-8e18-92543329b257",
+            "description": "This post is about a public post",
+            "contentType": "text/plain",
+            "author": {
+                "id": "465f0c29-690e-4960-96b4-98341eb29fca",
+                "type": "author",
+                "url": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+                "host": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/",
+                "displayName": "testaccount",
+                "profileImage": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/api/authors/465f0c29-690e-4960-96b4-98341eb29fca/profile_image",
+                "github": "https://github.com/TianxiangR",
+            },
+            "categories": [],
+            "count": 0,
+            "comments": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca/posts/a3aadcaf-1d3c-44cc-8b68-5ead89c82aa7/comments",
+            "published": "2023-11-27T23:10:28.087445+00:00",
+            "visibility": "PUBLIC",
+            "unlisted": False,
+            "content": "a public post",
+            "commentsSrc": {
+                "type": "comments",
+                "page": 1,
+                "post": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca/posts/a3aadcaf-1d3c-44cc-8b68-5ead89c82aa7",
+                "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca/posts/a3aadcaf-1d3c-44cc-8b68-5ead89c82aa7/comments",
+                "comments": [],
+                "size": 0
+            }
+        }
+    )
+])
 class PostDetailRemoteSerializer(PostBriefSerializer):
     commentsSrc = serializers.SerializerMethodField()
     id = serializers.SerializerMethodField()
@@ -953,6 +1010,162 @@ class PostListSerializer(PostBriefListSerializer):
         return PostDetailRemoteSerializer(obj, many=True, context={'request': request}).data
     
 
+@extend_schema_serializer(examples=[
+    OpenApiExample(
+        name="Comment List",
+        value={
+            "type": "comments",
+            "items": [
+                {
+                    "type": "comment",
+                    "author": {
+                        "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+                        "type": "author",
+                        "url": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+                        "host": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/",
+                        "displayName": "testaccount",
+                        "profileImage": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/api/authors/465f0c29-690e-4960-96b4-98341eb29fca/profile_image",
+                        "github": "https://github.com/TianxiangR",
+                    },
+                    "comment": "leaving a comment",
+                    "contentType": "text/plain",
+                    "published": "2023-11-26T23:31:28.702346+00:00",
+                    "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca/posts/17cbff5b-8737-4de7-b696-d169f57fd094/comments/0ead87fc-4649-4d72-b740-9db50ce8c05f"
+                },
+                {
+                    "type": "comment",
+                    "author": {
+                        "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+                        "type": "author",
+                        "url": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+                        "host": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/",
+                        "displayName": "testaccount",
+                        "profileImage": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/api/authors/465f0c29-690e-4960-96b4-98341eb29fca/profile_image",
+                        "github": "https://github.com/TianxiangR",
+                    },
+                    "comment": "leaving a comment",
+                    "contentType": "text/plain",
+                    "published": "2023-11-26T23:31:51.423841+00:00",
+                    "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca/posts/17cbff5b-8737-4de7-b696-d169f57fd094/comments/abbe7afc-76b3-4c7a-8c77-cb6b5ca88bdc"
+                },
+                {
+                    "type": "comment",
+                    "author": {
+                        "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+                        "type": "author",
+                        "url": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+                        "host": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/",
+                        "displayName": "testaccount",
+                        "profileImage": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/api/authors/465f0c29-690e-4960-96b4-98341eb29fca/profile_image",
+                        "github": "https://github.com/TianxiangR",
+                    },
+                    "comment": "leaving a comment",
+                    "contentType": "text/plain",
+                    "published": "2023-11-26T23:33:14.676910+00:00",
+                    "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca/posts/17cbff5b-8737-4de7-b696-d169f57fd094/comments/a111defc-9d36-4464-826f-d2fe60dbdbda"
+                },
+                {
+                    "type": "comment",
+                    "author": {
+                        "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+                        "type": "author",
+                        "url": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+                        "host": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/",
+                        "displayName": "testaccount",
+                        "profileImage": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/api/authors/465f0c29-690e-4960-96b4-98341eb29fca/profile_image",
+                        "github": "https://github.com/TianxiangR",
+                    },
+                    "comment": "leaving a comment",
+                    "contentType": "text/plain",
+                    "published": "2023-11-26T23:36:04.208288+00:00",
+                    "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca/posts/17cbff5b-8737-4de7-b696-d169f57fd094/comments/b316ac0c-837c-4501-a996-c22be45fe631"
+                },
+                {
+                    "type": "comment",
+                    "author": {
+                        "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+                        "type": "author",
+                        "url": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+                        "host": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/",
+                        "displayName": "testaccount",
+                        "profileImage": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/api/authors/465f0c29-690e-4960-96b4-98341eb29fca/profile_image",
+                        "github": "https://github.com/TianxiangR",
+                    },
+                    "comment": "leaving a comment",
+                    "contentType": "text/plain",
+                    "published": "2023-11-26T23:36:25.394946+00:00",
+                    "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca/posts/17cbff5b-8737-4de7-b696-d169f57fd094/comments/2a0a0bb4-f943-4150-b857-5ebde4a581d1"
+                },
+                {
+                    "type": "comment",
+                    "author": {
+                        "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+                        "type": "author",
+                        "url": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+                        "host": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/",
+                        "displayName": "testaccount",
+                        "profileImage": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/api/authors/465f0c29-690e-4960-96b4-98341eb29fca/profile_image",
+                        "github": "https://github.com/TianxiangR",
+                    },
+                    "comment": "leaving a comment",
+                    "contentType": "text/plain",
+                    "published": "2023-11-26T23:36:43.884125+00:00",
+                    "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca/posts/17cbff5b-8737-4de7-b696-d169f57fd094/comments/f40e9350-59ad-4e62-8e1a-f63d65b8400a"
+                },
+                {
+                    "type": "comment",
+                    "author": {
+                        "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+                        "type": "author",
+                        "url": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+                        "host": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/",
+                        "displayName": "testaccount",
+                        "profileImage": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/api/authors/465f0c29-690e-4960-96b4-98341eb29fca/profile_image",
+                        "github": "https://github.com/TianxiangR",
+                    },
+                    "comment": "leaving a comment",
+                    "contentType": "text/plain",
+                    "published": "2023-11-26T23:38:56.139786+00:00",
+                    "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca/posts/17cbff5b-8737-4de7-b696-d169f57fd094/comments/7315f185-e96e-492e-8f04-58eed536ffc1"
+                },
+                {
+                    "type": "comment",
+                    "author": {
+                        "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+                        "type": "author",
+                        "url": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+                        "host": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/",
+                        "displayName": "testaccount",
+                        "profileImage": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/api/authors/465f0c29-690e-4960-96b4-98341eb29fca/profile_image",
+                        "github": "https://github.com/TianxiangR",
+                    },
+                    "comment": "leaving a comment",
+                    "contentType": "text/plain",
+                    "published": "2023-11-26T23:43:14.321041+00:00",
+                    "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca/posts/17cbff5b-8737-4de7-b696-d169f57fd094/comments/a081ecda-2e00-47ff-8a86-e2293b6d23ea"
+                },
+                {
+                    "type": "comment",
+                    "author": {
+                        "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+                        "type": "author",
+                        "url": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca",
+                        "host": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/",
+                        "displayName": "testaccount",
+                        "profileImage": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/api/authors/465f0c29-690e-4960-96b4-98341eb29fca/profile_image",
+                        "github": "https://github.com/TianxiangR",
+                    },
+                    "comment": "leaving a comment",
+                    "contentType": "text/plain",
+                    "published": "2023-11-26T23:43:41.724706+00:00",
+                    "id": "https://cmput404-project-backend-tian-aaf1fa9b20e8.herokuapp.com/authors/465f0c29-690e-4960-96b4-98341eb29fca/posts/17cbff5b-8737-4de7-b696-d169f57fd094/comments/f83d2186-f873-45a7-a11b-4eef5d5c7a40"
+                }
+                    ],
+                "size": 0,
+                "page": 1
+            }
+    )
+])
 class CommentListRemoteSerializer(serializers.Serializer):
     type = serializers.SerializerMethodField()
     items = serializers.SerializerMethodField()

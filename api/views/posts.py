@@ -38,6 +38,10 @@ class PostListRemote(GenericAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 
+@extend_schema(
+    description="Get the post information from the server by id",
+    responses={200: PostDetailRemoteSerializer}
+)
 class PostDetailRemote(GenericAPIView):
   authentication_classes = [BasicAuthentication]
   permission_classes = [IsAuthenticated]

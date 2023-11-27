@@ -9,8 +9,12 @@ from ..utils import has_access_to_post
 from urllib3.util import parse_url
 from ..api_lookup import API_LOOKUP
 from .inbox import handleInbox
+from drf_spectacular.utils import extend_schema
 
-
+@extend_schema(
+    description="Get a list of comments of a post from the server",
+    responses={200: CommentListRemoteSerializer}
+)
 class CommentListRemote(GenericAPIView):
     authentication_classes = [BasicAuthentication]
     permission_classes = [IsAuthenticated]
@@ -24,7 +28,11 @@ class CommentListRemote(GenericAPIView):
         serializer = self.get_serializer(post.comments.all(), context = {'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-    
+
+@extend_schema(
+    description="Get the comment information from the server by id",
+    responses={200: CommentDetailRemoteSerializer}
+)
 class CommentDetailRemote(GenericAPIView):
   authentication_classes = [BasicAuthentication]
   permission_classes = [IsAuthenticated]

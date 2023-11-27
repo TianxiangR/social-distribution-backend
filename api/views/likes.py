@@ -9,8 +9,13 @@ from ..utils import has_access_to_post
 from urllib3.util import parse_url
 from ..api_lookup import API_LOOKUP
 from .inbox import handleInbox
+from drf_spectacular.utils import extend_schema
 
 
+@extend_schema(
+    description="Get a list of likes of a post from the server",
+    responses={200: AuthorListRemoteSerializer}
+)
 class LikePostListRemote(GenericAPIView):
     authentication_classes = [BasicAuthentication]
     permission_classes = [IsAuthenticated]
@@ -30,7 +35,11 @@ class LikePostListRemote(GenericAPIView):
         serializer = self.get_serializer(authors, context = {'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
       
-      
+
+@extend_schema(
+    description="Get a list of likes of a comment from the server",
+    responses={200: AuthorListRemoteSerializer}
+)
 class LikeCommentListRemote(GenericAPIView):
     authentication_classes = [BasicAuthentication]
     permission_classes = [IsAuthenticated]
