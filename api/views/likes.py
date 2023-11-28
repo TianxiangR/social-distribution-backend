@@ -98,7 +98,7 @@ class LikePostListLocal(LikePostListRemote):
       "@context": "https://www.w3.org/ns/activitystreams",
       "summary": f"{requester.username} liked your post",
       "type": "Like",
-      "object": PostDetailRemoteSerializer(post, context={'request': request}).data,
+      "object": f"{request.scheme}://{request.get_host()}/authors/{post.author.id}/posts/{post.id}",
       "author": author_data,
     }
     if post.is_foreign:
@@ -163,7 +163,7 @@ class LikeCommentListLocal(LikeCommentListRemote):
       "@context": "https://www.w3.org/ns/activitystreams",
       "summary": f"{requester.username} liked your comment",
       "type": "Like",
-      "object": CommentDetailRemoteSerializer(comment, context={'request': request}).data,
+      "object": f"{request.scheme}://{request.get_host()}/authors/{comment_author.id}/posts/{post.id}/comments/{comment.id}",
       "author": author_data,
     }
     

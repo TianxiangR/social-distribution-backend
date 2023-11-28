@@ -6,7 +6,7 @@ import re
 from datetime import datetime
 
 def is_comment_detail_url(url):
-  return re.search(r'^https?:\/\/.+\/authors\/([0-9|a-z|]{8}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{12})\/posts\/([0-9|a-z|]{8}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{12})\/comments/([0-9|a-z|]{8}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{12})$', url) is not None \
+  return re.search(r'^https?:\/\/.+\/authors\/([0-9|a-z|]{8}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{12})\/posts\/([0-9|a-z|]{8}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{12})\/comments\/([0-9|a-z|]{8}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{12})$', url) is not None \
     or re.search(r'^https?:\/\/.+\/authors\/([0-9|a-z|]{32})\/posts\/([0-9|a-z|]{32})\/comments\/([0-9|a-z|]{32})$', url) is not None
   
   
