@@ -35,20 +35,23 @@ def handleInbox(receiver_obj, request_data):
         return Response(status=status.HTTP_200_OK)
     
   elif type == "Like":
-    if is_comment_detail_url(object):
-      comment_id = get_comment_id_from_url(object)
+    if is_comment_detail_url(object.get("id", "")):
+      comment_id = get_comment_id_from_url(object.get("id", ""))
       comment_obj = Comment.objects.filter(id=comment_id).first()
       if comment_obj:
         LikeComment.objects.create(comment=comment_obj, user=sender_obj)
         InboxItem.objects.create(receiver=receiver_obj, sender=sender_obj, type=type, item=json.dumps(request_data))
         return Response(status=status.HTTP_200_OK)
-    elif is_post_detail_url(object):
-      post_id = get_post_id_from_url(object)
+    elif is_post_detail_url(object.get("id", "")):
+      post_id = get_post_id_from_url(object.get("id", ""))
       post_obj = Post.objects.filter(id=post_id).first()
+      print(post_obj)
       if post_obj:
         LikePost.objects.create(post=post_obj, user=sender_obj)
         InboxItem.objects.create(receiver=receiver_obj, sender=sender_obj, type=type, item=json.dumps(request_data))
         return Response(status=status.HTTP_200_OK)
+    else:
+      print("Invalid Like object")
   
   elif type == "comment":
     post_id = get_post_id_from_url(object["id"])

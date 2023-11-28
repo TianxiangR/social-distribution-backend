@@ -1,5 +1,5 @@
 from api.models import User, Post, Comment, LikePost, LikeComment
-from api.serializer import AuthorListRemoteSerializer, AuthorListLocalSerializer, LikePostSerializer, LikeCommentSerializer, AuthorRemoteSerializer
+from api.serializer import AuthorListRemoteSerializer, AuthorListLocalSerializer, LikePostSerializer, LikeCommentSerializer, AuthorRemoteSerializer, PostDetailRemoteSerializer, CommentDetailRemoteSerializer
 from rest_framework.generics import GenericAPIView, get_object_or_404
 from rest_framework.authentication import TokenAuthentication, BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
@@ -98,7 +98,7 @@ class LikePostListLocal(LikePostListRemote):
       "@context": "https://www.w3.org/ns/activitystreams",
       "summary": f"{requester.username} liked your post",
       "type": "Like",
-      "object": post.origin,
+      "object": PostDetailRemoteSerializer(post, context={'request': request}).data,
       "author": author_data,
     }
     if post.is_foreign:
@@ -163,7 +163,7 @@ class LikeCommentListLocal(LikeCommentListRemote):
       "@context": "https://www.w3.org/ns/activitystreams",
       "summary": f"{requester.username} liked your comment",
       "type": "Like",
-      "object": post.origin + f"/comments/{comment.id}",
+      "object": CommentDetailRemoteSerializer(comment, context={'request': request}).data,
       "author": author_data,
     }
     
