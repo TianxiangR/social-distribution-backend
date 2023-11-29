@@ -5,10 +5,34 @@ import uuid
 from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
 
 
+class CreateUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['username', 'password', 'github']
+        
+    def create(self, validated_data):
+        user = super().create(validated_data)
+        user.set_password(self.initial_data['password'])
+        user.save()
+        print(user.is_active)
+        user.is_active = True
+        return user
+    
+    def update(self, instance, validated_data):
+        user = super().update(instance, validated_data)
+        try:
+            user.set_password(self.initial_data['password'])
+            user.save()
+        except KeyError:
+            pass
+        return user
+
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = '__all__'
+    
 
         
 class PostSerializer(serializers.ModelSerializer): 

@@ -15,7 +15,6 @@ class User(AbstractUser):
     is_foreign = models.BooleanField(default=False)
     image_url = models.URLField(null=True, blank=True)
 
-
 class Post(models.Model):
     id = models.UUIDField(primary_key=True, unique=True, editable=False, default=uuid.uuid4)
     title = models.CharField(max_length=50)

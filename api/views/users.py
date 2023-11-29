@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate
 from api.models import User
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
-from api.serializer import  UserSerializer,  AuthorRemoteSerializer
+from api.serializer import  UserSerializer,  CreateUserSerializer
 from rest_framework.authtoken.models import Token
 from drf_spectacular.utils import extend_schema
 from rest_framework.generics import GenericAPIView
@@ -10,6 +10,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from django.contrib.auth.hashers import make_password
 
 # Create your views here.
 
@@ -21,7 +22,7 @@ from rest_framework import status
 @api_view(['POST'])
 def signup(request):
     if request.method == "POST":
-        serializer = UserSerializer(data=request.data)
+        serializer = CreateUserSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return JsonResponse({'message': 'Signup successful'}, status=200)
