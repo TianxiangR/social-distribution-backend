@@ -1,5 +1,5 @@
 from api.models import User
-from api.serializer import AuthorRemoteSerializer, AuthorListLocalSerializer, AuthorLocalSerializer, AuthorListRemoteSerializer, UserSerializer
+from api.serializer import AuthorRemoteSerializer, AuthorListLocalSerializer, AuthorLocalSerializer, AuthorListRemoteSerializer, UserSerializer, GithubActivitySerializer
 from rest_framework.generics import GenericAPIView
 from rest_framework.authentication import BasicAuthentication, TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
@@ -10,6 +10,7 @@ from ..server_adapters.base_server_adapter import BaseServerAdapter
 from ..utils import get_author_id_from_url
 from rest_framework.exceptions import ParseError
 from drf_spectacular.utils import extend_schema
+import requests
 
 @extend_schema(
     description="Get a list of authors from the server",
@@ -43,6 +44,29 @@ class AuthorDetailRemote(GenericAPIView):
     author = self.get_object()
     serializer = self.get_serializer(author)
     return Response(serializer.data, status=status.HTTP_200_OK)
+  
+class GithubActivity(GenericAPIView):
+  authentication_classes = [TokenAuthentication]
+  permission_classes = [IsAuthenticated]
+  serializer_class = GithubActivitySerializer
+  lookup_url_kwarg = 'author_id'
+  
+  def get(self, request, **kwargs):
+    author_id = kwargs.get('author_id')
+    print("author id is", author_id)
+    user = User.objects.get(id=author_id)
+    if user.github is None:
+      return Response(status=status.HTTP_400_BAD_REQUEST)
+    
+    github_username = user.github.split('/')[-1]
+    print("github username is", github_username)
+    response = requests.get('https://api.github.com/users/{}/events'.format(github_username))
+    if response.status_code == 200:
+      return Response(response.json(), status=status.HTTP_200_OK)
+    else:
+      return Response(status=status.HTTP_400_BAD_REQUEST)
+    
+    return Response(status=status.HTTP_404_NOT_FOUND)
   
 
 class AuthorDetailLocal(GenericAPIView):

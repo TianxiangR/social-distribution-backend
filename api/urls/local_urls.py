@@ -12,6 +12,7 @@ urlpatterns = [
     path('authors/<uuid:author_id>', authors.AuthorDetailLocal.as_view(), name='author_detail'),
     path('authors/<uuid:author_id>/followers', follows.FollowerListLocal.as_view(), name='follower_list_local'),
     path('authors/<uuid:author_id>/profile_image', image.ProfileImage.as_view(), name='profile_image'),
+    path('authors/<uuid:author_id>/github_activity', authors.GithubActivity.as_view(), name='github_activity'),
     path('followers/', follows.FollowerListLocal.as_view(), name='follower_list_local'),
     path('followings/', follows.FollowingListLocal.as_view(), name='following_list_local'),
     
