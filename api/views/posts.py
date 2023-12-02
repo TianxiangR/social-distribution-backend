@@ -14,7 +14,10 @@ from ..api_lookup import API_LOOKUP
 from ..utils import get_author_id_from_url
 from drf_spectacular.utils import extend_schema
 import requests
-from operator import itemgetter
+from logging import getLogger
+from datetime import datetime
+
+logger = getLogger('django')
 
 @extend_schema(
     description="Get a list of public posts of an author from the server",
@@ -81,29 +84,26 @@ class PostListLocal(GenericAPIView):
     serializer.data["items"].sort(key=lambda x: datetime.strptime(x["published"], '%Y-%m-%dT%H:%M:%S.%f%z'), reverse=True)
     
     # github activity
-    print("requester id is", requester.id)
     user = User.objects.get(id=requester.id)
     if user.github is None:
       return Response(status=status.HTTP_400_BAD_REQUEST)
     
     github_username = user.github.split('/')[-1]
-    print("github username is", github_username)
     response = requests.get('https://api.github.com/users/{}/events'.format(github_username))
-    if response.status_code != 200:
-      return Response(status=status.HTTP_400_BAD_REQUEST)
-    
-    print("response is", response.json())
-    github_activity_data = response.json()
-    for event in github_activity_data:
-      if 'created_at' in event:
-          event['published'] = event.pop('created_at')
+    github_activity_data = []
+    if response.status_code == 200:
+      github_activity_data = response.json()
+      for event in github_activity_data:
+        if 'created_at' in event:
+            event['published'] = event.pop('created_at')
+    else:
+      logger.error(f"ERROR [{datetime.now()}] Github API call failed with status code {response.status_code}")
   
     combined_data = {
       "items": serializer.data["items"] + github_activity_data,
     }
     
-    combined_data["items"].sort(key=lambda x: x.get('published', ''), reverse=True
-    )
+    combined_data["items"].sort(key=lambda x: x.get('published', ''), reverse=True)
     
     return Response(combined_data, status=status.HTTP_200_OK)
   
@@ -112,43 +112,34 @@ class PostListLocal(GenericAPIView):
     post_data = request.data
     post_id = uuid.uuid4()
     post_data['id'] = post_id
-    print("post_id", post_id)
     post_data['author'] = author.id
     post_data['origin'] = f"{request.scheme}://{request.get_host()}/author/{author.id}/posts/{post_id}"
     post_data['source'] = f"{request.scheme}://{request.get_host()}/author/{author.id}/posts/{post_id}"
     
     serializer = PostSerializer(data=post_data, context = {'request': request})
     if serializer.is_valid():
-      serializer.save()
-      instance = serializer.instance
-      update_data = {
-        "origin": f"{request.scheme}://{request.get_host()}/author/{author.id}/posts/{post_id}",
-        "source": f"{request.scheme}://{request.get_host()}/author/{author.id}/posts/{post_id}",
+      instance = Post.objects.create(post_data)
+      object = dict(PostDetailRemoteSerializer(instance, context={'request': request}).data)
+      request_data = {
+        "@context": "https://www.w3.org/ns/activitystreams",
+        "summary": f"{author.username} shared a post with you",
+        "object": object,
       }
-      serializer = PostSerializer(instance, data=update_data, partial=True, context = {'request': request})
-      if serializer.is_valid():
-        serializer.save()
-        object = dict(PostDetailRemoteSerializer(instance, context={'request': request}).data)
-        request_data = {
-          "@context": "https://www.w3.org/ns/activitystreams",
-          "summary": f"{author.username} shared a post with you",
-          "object": object,
-        }
-        for user in User.objects.filter(is_server=False, is_superuser=False, is_foreign=False):
-          if user.id != author.id and has_access_to_post(instance, user):
-            receiver_obj = user
-            try:
-              handleInbox(receiver_obj, request_data)
-            except:
-              pass
-        
-        for adapter in API_LOOKUP.values():
-          author_list_resp = adapter.request_get_author_list()
-          print("author list resp is", author_list_resp)
-          if author_list_resp["status_code"] == 200:
-            for foreign_author in author_list_resp["body"]:
-              foreign_author_id = get_author_id_from_url(foreign_author["id"])
-              adapter.request_post_author_inbox(foreign_author_id, request_data)
+      for user in User.objects.filter(is_server=False, is_superuser=False, is_foreign=False):
+        if user.id != author.id and has_access_to_post(instance, user):
+          receiver_obj = user
+          try:
+            handleInbox(receiver_obj, request_data)
+          except:
+            pass
+      
+      for adapter in API_LOOKUP.values():
+        author_list_resp = adapter.request_get_author_list()
+        print("author list resp is", author_list_resp)
+        if author_list_resp["status_code"] == 200:
+          for foreign_author in author_list_resp["body"]:
+            foreign_author_id = get_author_id_from_url(foreign_author["id"])
+            adapter.request_post_author_inbox(foreign_author_id, request_data)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
     

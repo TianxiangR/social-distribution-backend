@@ -36,6 +36,10 @@ class FriendRequestList(GenericAPIView):
     if (target_host not in API_LOOKUP and target_host != request_host) or target["id"] == author.id:
       return Response(status=status.HTTP_400_BAD_REQUEST)
     target_obj = get_or_create_user(target)
+    if target_obj.is_foreign:
+      # since we don't know if a foreign target would accept the friend request, we record the follow relation first
+      # then we will use /authors/{author_id}/followers/{foreign_author_id} to check if the target has accepted the request
+      Follow.objects.create(target=target_obj, follower=author)
     request_data = {
       "@context": "https://www.w3.org/ns/activitystreams",
       "summary": f"{author.username} wants to be your friend",
@@ -46,7 +50,6 @@ class FriendRequestList(GenericAPIView):
     if target_obj.is_foreign:
       adapter = API_LOOKUP[target_host]
       resp = adapter.request_post_author_inbox(target_obj.id, request_data)
-      print(resp["status_code"])
     else:
       handleInbox(target_obj, request_data)
       

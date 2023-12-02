@@ -63,7 +63,8 @@ def get_or_create_user(obj):
   else:
     user = User.objects.create(
       id=id,
-      username=obj["displayName"],
+      username=obj["displayName"] + str(uuid.uuid4()),
+      displayName=obj["displayName"],
       email="default@email.com",
       password="default",
       host = obj["host"],

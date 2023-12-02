@@ -5,7 +5,7 @@ import uuid
 
 # Create your models here.
 class User(AbstractUser):
-    id = models.UUIDField(primary_key=True, unique=True, editable=False, default=uuid.uuid4)
+    id = models.UUIDField(primary_key=True, unique=True, editable=True, default=uuid.uuid4)
     profile_image = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_server = models.BooleanField(default=False)
@@ -14,9 +14,11 @@ class User(AbstractUser):
     url = models.URLField(null=True, blank=True)
     is_foreign = models.BooleanField(default=False)
     image_url = models.URLField(null=True, blank=True)
+    displayName = models.TextField(null=True, blank=True)
+
 
 class Post(models.Model):
-    id = models.UUIDField(primary_key=True, unique=True, editable=False, default=uuid.uuid4)
+    id = models.UUIDField(primary_key=True, unique=True, editable=True, default=uuid.uuid4)
     title = models.CharField(max_length=50)
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
     content = models.TextField(blank=True)
@@ -47,7 +49,7 @@ class Follow(models.Model):
         
         
 class FriendRequest(models.Model):
-    id = models.UUIDField(primary_key=True, unique=True, editable=False, default=uuid.uuid4)
+    id = models.UUIDField(primary_key=True, unique=True, editable=True, default=uuid.uuid4)
     target = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friend_requests')
     requester = models.ForeignKey(User, on_delete=models.CASCADE, related_name='requested_friends')
     status = models.CharField(max_length=50, choices=[('ACCEPTED', 'ACCEPTED'), ('REJECTED', 'REJECTED'), ('PENDING', 'PENDING')], default='PENDING')
@@ -64,7 +66,7 @@ class LikePost(models.Model):
 
 
 class Comment(models.Model):
-    id = models.UUIDField(primary_key=True, unique=True, editable=False, default=uuid.uuid4)
+    id = models.UUIDField(primary_key=True, unique=True, editable=True, default=uuid.uuid4)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
     content = models.CharField(max_length=500)
@@ -81,7 +83,7 @@ class LikeComment(models.Model):
         
 
 class InboxItem(models.Model):
-    id = models.UUIDField(primary_key=True, unique=True, editable=False, default=uuid.uuid4)
+    id = models.UUIDField(primary_key=True, unique=True, editable=True, default=uuid.uuid4)
     receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='inbox_items')
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_items')
     item = models.TextField()
