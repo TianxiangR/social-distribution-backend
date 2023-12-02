@@ -1275,29 +1275,6 @@ class FriendRequestListSerializer(serializers.Serializer):
         return 1
     
 
-class GithubActivitySerializer (serializers.Serializer):
-    type = serializers.SerializerMethodField()
-    items = serializers.SerializerMethodField()
-    size = serializers.SerializerMethodField()
-    page = serializers.SerializerMethodField()
-    
-    
-    def get_type(self, obj):
-        return 'githubactivity'
-    
-    
-    def get_items(self, obj):
-        request = self.context.get('request')
-        return GithubActivityDetailSerializer(obj, many=True, context={'request': request}).data
-    
-    
-    def get_size(self, obj):
-        return len(obj)
-    
-    
-    def get_page(self, obj):
-        return 1
-
 @extend_schema_serializer(examples=[
     OpenApiExample(
         name="Share Post Request",
