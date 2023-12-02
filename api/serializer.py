@@ -1276,7 +1276,6 @@ class FriendRequestListSerializer(serializers.Serializer):
         return 1
     
 
-
 @extend_schema_serializer(examples=[
     OpenApiExample(
         name="Share Post Request",

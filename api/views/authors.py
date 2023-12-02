@@ -10,6 +10,7 @@ from ..server_adapters.base_server_adapter import BaseServerAdapter
 from ..utils import get_author_id_from_url
 from rest_framework.exceptions import ParseError
 from drf_spectacular.utils import extend_schema
+import requests
 
 @extend_schema(
     description="Get a list of authors from the server",
@@ -44,7 +45,6 @@ class AuthorDetailRemote(GenericAPIView):
     serializer = self.get_serializer(author)
     return Response(serializer.data, status=status.HTTP_200_OK)
   
-
 class AuthorDetailLocal(GenericAPIView):
   authentication_classes = [BasicAuthentication]
   queryset = User.objects.filter(is_server=False, is_superuser=False)
