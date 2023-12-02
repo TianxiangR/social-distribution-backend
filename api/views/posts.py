@@ -85,6 +85,8 @@ class PostListLocal(GenericAPIView):
     author = request.user
     post_data = request.data
     post_id = uuid.uuid4()
+    post_data['id'] = post_id
+    print("post_id", post_id)
     post_data['author'] = author.id
     post_data['origin'] = f"{request.scheme}://{request.get_host()}/author/{author.id}/posts/{post_id}"
     post_data['source'] = f"{request.scheme}://{request.get_host()}/author/{author.id}/posts/{post_id}"
@@ -100,11 +102,10 @@ class PostListLocal(GenericAPIView):
       serializer = PostSerializer(instance, data=update_data, partial=True, context = {'request': request})
       if serializer.is_valid():
         serializer.save()
-        object = PostDetailRemoteSerializer(instance, context={'request': request}).data
+        object = dict(PostDetailRemoteSerializer(instance, context={'request': request}).data)
         request_data = {
           "@context": "https://www.w3.org/ns/activitystreams",
           "summary": f"{author.username} shared a post with you",
-          "author": AuthorRemoteSerializer(author, context={'request': request}).data,
           "object": object,
         }
         for user in User.objects.filter(is_server=False, is_superuser=False, is_foreign=False):

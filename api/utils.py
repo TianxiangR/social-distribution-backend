@@ -3,7 +3,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.exceptions import ParseError
 import uuid
 import re
-from datetime import datetime
+from dateutil.parser import parse as parse_time
 
 def is_comment_detail_url(url):
   return re.search(r'^https?:\/\/.+\/authors\/([0-9|a-z|]{8}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{12})\/posts\/([0-9|a-z|]{8}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{12})\/comments\/([0-9|a-z|]{8}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{4}-[0-9|a-z]{12})$', url) is not None \
@@ -86,7 +86,7 @@ def create_comment_from_request_data(request_data, post_obj):
     comment_id = id
   else:
     comment_id = get_comment_id_from_url(id)
-  created_at = datetime.strptime(published, '%Y-%m-%dT%H:%M:%S.%f%z')
+  created_at = parse_time(published)
   
   if not Comment.objects.filter(id=comment_id).exists():
     comment_obj = Comment.objects.create(id=comment_id, post=post_obj, user=author_obj, content=comment, created_at=created_at)
@@ -129,13 +129,13 @@ def create_or_update_shared_post_from_request_data(request_data, receiver_obj):
       post_obj.content = content
       post_obj.visibility = visibility
       post_obj.unlisted = unlisted
-      post_obj.created_at = datetime.strptime(published, '%Y-%m-%dT%H:%M:%S.%f%z')
+      post_obj.created_at = parse_time(published)
       post_obj.save()
   
   else:
     author_obj = get_or_create_user(author)
     is_foreign = author_obj.is_foreign
-    post_obj = Post.objects.create(id=post_id, title=title, source=source, origin=origin, content=content, contentType=contentType, author=author_obj, visibility=visibility, unlisted=unlisted, created_at=datetime.strptime(published, '%Y-%m-%dT%H:%M:%S.%f%z'), is_foreign=is_foreign)
+    post_obj = Post.objects.create(id=post_id, title=title, source=source, origin=origin, content=content, contentType=contentType, author=author_obj, visibility=visibility, unlisted=unlisted, created_at=parse_time(published), is_foreign=is_foreign)
     post_obj.save()
   
   if not PostAccess.objects.filter(post=post_obj, user=receiver_obj).exists():
@@ -157,3 +157,4 @@ def has_access_to_post(post_obj, user_obj):
       return True
  
   return False
+

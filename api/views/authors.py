@@ -98,7 +98,7 @@ class AuthorListLocal(GenericAPIView):
                   author["is_following"] = False
                 response_data["items"].append(author)
               except ParseError:
-                pass
+                print("ParseError", adapter.host)
         
         return Response(response_data, status=status.HTTP_200_OK)
       

@@ -77,23 +77,20 @@ class FriendRequestSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class AuthorLocalSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['id', 'type', 'url', 'host', 'displayName', 'profileImage', 'github', 'is_following']
-
+class AuthorRemoteSerializer(serializers.Serializer):
+    github = serializers.URLField()
     type = serializers.SerializerMethodField()
     displayName = serializers.SerializerMethodField()
     profileImage = serializers.SerializerMethodField()
     url = serializers.SerializerMethodField()
     host = serializers.SerializerMethodField()
-    is_following = serializers.SerializerMethodField()
-    
-    def get_is_following(self, obj):
+    id = serializers.SerializerMethodField()
+
+
+    def get_id(self, obj):
         request = self.context.get('request')
-        user = request.user
-        return obj.followed_relations.filter(follower_id=user.id).exists()
-    
+        return f'{request.scheme}://{request.get_host()}/authors/{obj.id}'
+
 
     def get_type(self, obj):
         return 'author'
@@ -142,12 +139,14 @@ class AuthorLocalSerializer(serializers.ModelSerializer):
         }
     )
 ])
-class AuthorRemoteSerializer(AuthorLocalSerializer):
-    id = serializers.SerializerMethodField()
+class AuthorLocalSerializer(AuthorRemoteSerializer):
+    id = serializers.UUIDField()
+    is_following = serializers.SerializerMethodField()
     
-    def get_id(self, obj):
+    def get_is_following(self, obj):
         request = self.context.get('request')
-        return f'{request.scheme}://{request.get_host()}/authors/{obj.id}'
+        user = request.user
+        return obj.followed_relations.filter(follower_id=user.id).exists()
 
 
 class AuthorListLocalSerializer(serializers.Serializer):
@@ -427,6 +426,7 @@ class PostBriefLocalSerializer(PostBriefSerializer):
 class PostDetailRemoteSerializer(PostBriefSerializer):
     commentsSrc = serializers.SerializerMethodField()
     id = serializers.SerializerMethodField()
+    author = AuthorRemoteSerializer()
     
     def get_id(self, obj):
         request = self.context.get('request')
@@ -454,6 +454,7 @@ class PostDetailLocalSerializer(PostBriefLocalSerializer):
     commentsSrc = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
     like_count = serializers.SerializerMethodField()
+    author = AuthorLocalSerializer()
     
     
     def get_is_liked(self, obj):
