@@ -27,4 +27,5 @@ urlpatterns = [
     path('posts/<uuid:post_id>/comments/<uuid:comment_id>/likes', likes.LikeCommentListLocal.as_view(), name='like_comment_list_local'),
     
     path('posts/<uuid:post_id>/image', image.PostImage.as_view(), name='post_image'),
+    path('share-post/', posts.SharePost.as_view(), name='share_post'),
 ]

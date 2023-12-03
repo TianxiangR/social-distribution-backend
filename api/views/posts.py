@@ -11,11 +11,13 @@ from datetime import datetime
 from .inbox import handleInbox
 from urllib3.util import parse_url
 from ..api_lookup import API_LOOKUP
-from ..utils import get_author_id_from_url
+from ..utils import get_author_id_from_url, get_or_create_user
 from drf_spectacular.utils import extend_schema
 import requests
 from logging import getLogger
 from datetime import datetime
+from dateutil.parser import parse as date_parser
+from urllib3.util import parse_url
 
 logger = getLogger('django')
 
@@ -36,9 +38,9 @@ class PostListRemote(GenericAPIView):
         data = serializer.data
         
         for post in data["items"]:
-          post["commentsSrc"]["comments"].sort(key=lambda x: datetime.strptime(x["published"], '%Y-%m-%dT%H:%M:%S.%f%z'), reverse=True)
+          post["commentsSrc"]["comments"].sort(key=lambda x: date_parser(x["published"]), reverse=True)
         
-        data["items"].sort(key=lambda x: datetime.strptime(x["published"], '%Y-%m-%dT%H:%M:%S.%f%z'), reverse=True)
+        data["items"].sort(key=lambda x: date_parser(x["published"]), reverse=True)
           
         return Response(serializer.data, status=status.HTTP_200_OK)
     
@@ -67,7 +69,7 @@ class PostDetailRemote(GenericAPIView):
 class PostListLocal(GenericAPIView):
   authentication_classes = [TokenAuthentication]
   permission_classes = [IsAuthenticated]
-  queryset = Post.objects.all()
+  queryset = Post.objects.filter(unlisted=False)
   serializer_class = PostBriefListSerializer
   
   
@@ -81,29 +83,28 @@ class PostListLocal(GenericAPIView):
         accessible_posts.append(post)
         
     serializer = self.get_serializer(accessible_posts, context = {'request': request})
-    serializer.data["items"].sort(key=lambda x: datetime.strptime(x["published"], '%Y-%m-%dT%H:%M:%S.%f%z'), reverse=True)
+    serializer.data["items"].sort(key=lambda x: date_parser(x["published"]), reverse=True)
     
     # github activity
     user = User.objects.get(id=requester.id)
-    if user.github is None:
-      return Response(status=status.HTTP_400_BAD_REQUEST)
-    
-    github_username = user.github.split('/')[-1]
-    response = requests.get('https://api.github.com/users/{}/events'.format(github_username))
     github_activity_data = []
-    if response.status_code == 200:
-      github_activity_data = response.json()
-      for event in github_activity_data:
-        if 'created_at' in event:
-            event['published'] = event.pop('created_at')
-    else:
-      logger.error(f"ERROR [{datetime.now()}] Github API call failed with status code {response.status_code}")
+    if user.github is not None:
+      github_username = user.github.split('/')[-1]
+      response = requests.get('https://api.github.com/users/{}/events'.format(github_username))
+
+      if response.status_code == 200:
+        github_activity_data = response.json()
+        for event in github_activity_data:
+          if 'created_at' in event:
+              event['published'] = event.pop('created_at')
+      else:
+        logger.error(f"ERROR [{datetime.now()}] Github API call failed with status code {response.status_code}")
   
     combined_data = {
       "items": serializer.data["items"] + github_activity_data,
     }
     
-    combined_data["items"].sort(key=lambda x: x.get('published', ''), reverse=True)
+    combined_data["items"].sort(key=lambda x: date_parser(x["published"]), reverse=True)
     
     return Response(combined_data, status=status.HTTP_200_OK)
   
@@ -118,7 +119,7 @@ class PostListLocal(GenericAPIView):
     
     serializer = PostSerializer(data=post_data, context = {'request': request})
     if serializer.is_valid():
-      instance = Post.objects.create(post_data)
+      instance = serializer.save()
       object = dict(PostDetailRemoteSerializer(instance, context={'request': request}).data)
       request_data = {
         "@context": "https://www.w3.org/ns/activitystreams",
@@ -134,12 +135,12 @@ class PostListLocal(GenericAPIView):
             pass
       
       for adapter in API_LOOKUP.values():
-        author_list_resp = adapter.request_get_author_list()
-        print("author list resp is", author_list_resp)
-        if author_list_resp["status_code"] == 200:
-          for foreign_author in author_list_resp["body"]:
-            foreign_author_id = get_author_id_from_url(foreign_author["id"])
-            adapter.request_post_author_inbox(foreign_author_id, request_data)
+        if instance.visibility == "FRIENDS":
+          followers = [follower for follower in instance.author.followers.all() if follower.is_foreign]
+          for follower in followers:
+            host = parse_url(follower.host).host
+            if host in API_LOOKUP:
+              adapter.request_post_author_inbox(follower.id, request_data)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
     
@@ -159,7 +160,7 @@ class PostDetailLocal(GenericAPIView):
     post = self.get_object()
     if has_access_to_post(post, requester):
       serializer = self.get_serializer(post, context = {'request': request})
-      serializer.data["commentsSrc"]["comments"].sort(key=lambda x: datetime.strptime(x["published"], '%Y-%m-%dT%H:%M:%S.%f%z'), reverse=True)
+      serializer.data["commentsSrc"]["comments"].sort(key=lambda x: date_parser(x["published"]), reverse=True)
       return Response(serializer.data, status=status.HTTP_200_OK)
     
     return Response(status=status.HTTP_404_NOT_FOUND)
@@ -201,6 +202,39 @@ class PostDetailLocal(GenericAPIView):
       return Response(status=status.HTTP_200_OK)
     
     return Response(status=status.HTTP_404_NOT_FOUND)
+
+
+class SharePost(GenericAPIView):
+  authentication_classes = [TokenAuthentication]
+  permission_classes = [IsAuthenticated]
+  queryset = Post.objects.all()
+  serializer_class = PostDetailRemoteSerializer
+  lookup_url_kwarg = 'post_id'
+  
+  
+  def post(self, request, **kwargs):
+    author = request.user
+    post = self.get_object()
+    serializer = self.get_serializer(post)
+    for user_data in request.data:
+      user = get_or_create_user(user_data)
+      if user and user.id != author.id:
+        request_data = {
+          "@context": "https://www.w3.org/ns/activitystreams",
+          "summary": f"{author.username} shared a post with you",
+          "object": serializer.data,
+        }
+        host = parse_url(user.host).host
+        if not user.is_foreign:
+          handleInbox(user, request_data)
+        elif host in API_LOOKUP:
+          adapter = API_LOOKUP[host]
+          adapter.request_post_author_inbox(user.id, request_data)
+          
+    return Response(status=status.HTTP_200_OK)     
+    
+    
+    
   
 
 

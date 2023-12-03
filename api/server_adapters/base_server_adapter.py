@@ -78,7 +78,7 @@ class BaseServerAdapter():
     return self.base_url + 'authors/' + str(author_id) + '/liked'
   
   def get_author_inbox_url(self, author_id):
-    return self.base_url + 'authors/' + str(author_id) + '/inbox/'
+    return self.base_url + 'authors/' + str(author_id) + '/inbox'
   
   def get_post_detail_url(self, post_id):
     return self.base_url + 'posts/' + str(post_id)
