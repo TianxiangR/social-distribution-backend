@@ -141,6 +141,7 @@ def create_or_update_shared_post_from_request_data(request_data, receiver_obj):
   
   if not PostAccess.objects.filter(post=post_obj, user=receiver_obj).exists():
     PostAccess.objects.create(post=post_obj, user=receiver_obj)
+  print("created post access")
     
   for comment in comments:
     create_comment_from_request_data(comment, post_obj)

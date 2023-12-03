@@ -24,7 +24,8 @@ def handleInbox(receiver_obj, request_data):
     sender_obj = get_or_create_user(sender_data)
     object = request_data.get('object', None)
 
-  
+  print('reached here')
+  print(type)
   if type == "Follow":
     if sender_obj:
       if not Follow.objects.filter(target=receiver_obj, follower=sender_obj).exists() \
@@ -35,7 +36,6 @@ def handleInbox(receiver_obj, request_data):
         return Response(status=status.HTTP_200_OK)
     
   elif type == "Like":
-    print(object)
     if is_comment_detail_url(object):
       comment_id = get_comment_id_from_url(object)
       comment_obj = Comment.objects.filter(id=comment_id).first()
@@ -64,6 +64,7 @@ def handleInbox(receiver_obj, request_data):
       return Response(status=status.HTTP_200_OK)
     
   elif type == "post":
+    print("reached here")
     create_or_update_shared_post_from_request_data(request_data, receiver_obj)
     InboxItem.objects.create(receiver=receiver_obj, sender=sender_obj, type=type, item=json.dumps(request_data))
     return Response(status=status.HTTP_200_OK)

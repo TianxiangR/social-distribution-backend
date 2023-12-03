@@ -8,7 +8,7 @@ from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
 class CreateUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['username', 'password', 'github']
+        fields = ['username', 'password', 'github', 'profile_image']
         
     def create(self, validated_data):
         user = super().create(validated_data)
@@ -97,6 +97,8 @@ class AuthorRemoteSerializer(serializers.Serializer):
 
 
     def get_displayName(self, obj):
+        if obj.displayName:
+            return obj.displayName
         return obj.username
 
 

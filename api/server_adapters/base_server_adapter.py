@@ -36,7 +36,9 @@ class BaseServerAdapter():
     self.username = os.environ.get(self.username_env)
 
   def log_response(self, resp):
-    if resp.status_code > 299:
+    if resp.status_code == 500:
+      logger.error(f'ERROR [{datetime.now()}] {self.host} {resp.status_code}\n {resp.request.body} \n {resp.content}')
+    elif resp.status_code > 299:
       logger.error(f'ERROR [{datetime.now()}] {self.host} {resp.status_code}')
     else:
       logger.info(f'INFO  [{datetime.now()}] {self.host} {resp.status_code}')

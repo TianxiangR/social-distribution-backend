@@ -11,13 +11,7 @@ class IAmTeaPotAdapter(BaseServerAdapter):
   def get_author_detail_url(self, author_id):
     return super().get_author_detail_url(author_id)
   
-  # def request_get_author_list(self):
-  #   url = self.get_author_list_url()
-  #   response = requests.get(url, auth=(self.username, self.password))
-  #   print("IAmTeaPotAdapter: request_get_author_list: response: ", response)
-  #   return {
-  #     "status_code": response.status_code,
-  #     "body": response.json() if response.status_code == 200 else []
-  #   }
+  def get_author_inbox_url(self, author_id):
+    return super().get_author_inbox_url(author_id) + '/'
   
   

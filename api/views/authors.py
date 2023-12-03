@@ -120,10 +120,15 @@ class Profile(GenericAPIView):
     user = request.user
     username = request.data.get('username', None)
     github = request.data.get('github', None)
+    profile_image = request.data.get('profile_image', None)
     update_data = {
       "username": username,
-      "github": github
+      "github": github,
     }
+    
+    if profile_image is not None:
+      update_data["profile_image"] = profile_image
+    print(update_data)
     
     serializer = UserSerializer(user, data=update_data, partial=True)
     
