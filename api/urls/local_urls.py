@@ -28,4 +28,6 @@ urlpatterns = [
     
     path('posts/<uuid:post_id>/image', image.PostImage.as_view(), name='post_image'),
     path('share-post/', posts.SharePost.as_view(), name='share_post'),
+    path('unlisted-posts/', posts.UnlistedPostListLocal.as_view(), name='unlisted_post_list_local'),
+    path('unlisted-posts/<uuid:post_id>', posts.UnlistedPostDetailLocal.as_view(), name='unlisted_post_detail_local'),
 ]

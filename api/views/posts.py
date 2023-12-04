@@ -131,6 +131,7 @@ class PostListLocal(GenericAPIView):
     combined_data["items"].sort(key=lambda x: get_datetime_from_str(x["published"]), reverse=True)
     
     return Response(combined_data, status=status.HTTP_200_OK)
+
   
   def post(self, request, **kwargs):
     author = request.user
@@ -150,9 +151,7 @@ class PostListLocal(GenericAPIView):
         "summary": f"{author.username} shared a post with you",
         "object": object,
       }
-      
-      print(request_data)
-      
+    
       followers = [followed_relation.follower for followed_relation in author.followed_relations.all()]
       for user in followers:
         if not user.is_foreign:
@@ -162,22 +161,25 @@ class PostListLocal(GenericAPIView):
           except:
             pass
       
-      for adapter in API_LOOKUP.values():
-        if instance.visibility == "FRIENDS":
-          for follower in followers:
-            host = parse_url(follower.host).host
-            if host in API_LOOKUP:
-              adapter.request_post_author_inbox(follower.id, request_data)
-        elif instance.visibility == "PUBLIC":
-          try:
-            author_list_resp = adapter.request_get_author_list()
-            if author_list_resp["status_code"] == 200:
-              for foreign_author in author_list_resp["body"]:
-                foreign_author_id = get_author_id_from_url(foreign_author["id"])
-                adapter.request_post_author_inbox(foreign_author_id, request_data)
-          except Exception as e:
-            logger.error(f"ERROR [{datetime.now()}] {e}")
-              
+      if instance.unlisted == False:
+        for adapter in API_LOOKUP.values():
+          if instance.visibility == "FRIENDS":
+            for follower in followers:
+              host = parse_url(follower.host).host
+              if host in API_LOOKUP:
+                adapter.request_post_author_inbox(follower.id, request_data)
+          elif instance.visibility == "PUBLIC":
+            try:
+              author_list_resp = adapter.request_get_author_list()
+              if author_list_resp["status_code"] == 200:
+                for foreign_author in author_list_resp["body"]:
+                  foreign_author_id = get_author_id_from_url(foreign_author["id"])
+                  adapter.request_post_author_inbox(foreign_author_id, request_data)
+            except Exception as e:
+              logger.error(f"ERROR [{datetime.now()}] {e}")
+                
+          return Response(serializer.data, status=status.HTTP_200_OK)
+      else:
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -293,6 +295,32 @@ class SharePost(GenericAPIView):
             logger.error(f"ERROR [{datetime.now()}] {e}")
           
     return Response(status=status.HTTP_200_OK)     
+  
+  
+class UnlistedPostListLocal(GenericAPIView):
+  authentication_classes = [TokenAuthentication]
+  permission_classes = [IsAuthenticated]
+  queryset = Post.objects.filter(unlisted=True)
+  serializer_class = PostBriefListSerializer
+  
+  def get(self, request, **kwargs):
+    requester = request.user
+    posts = self.get_queryset().filter(author=requester)
+        
+    serializer = self.get_serializer(posts, context = {'request': request})
+    serializer.data["items"].sort(key=lambda x: get_datetime_from_str(x["published"]), reverse=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+  
+
+class UnlistedPostDetailLocal(GenericAPIView):
+  queryset = Post.objects.filter(unlisted=True)
+  serializer_class = PostDetailLocalSerializer
+  lookup_url_kwarg = 'post_id'
+  
+  def get(self, request, **kwargs):
+    post = self.get_object()
+    serializer = self.get_serializer(post, context = {'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)
     
     
     

@@ -104,11 +104,12 @@ class LikePostListLocal(LikePostListRemote):
     if post.is_foreign:
       post_author = post.author
       post_author_host = parse_url(post_author.host).host
+      LikePost.objects.create(post=post, user=requester)
       if post_author_host in API_LOOKUP:
         adapter = API_LOOKUP[post_author_host]
         resp = adapter.request_post_author_inbox(post_author.id, request_data)
         if resp["status_code"] == 200:
-          return Response(resp["body"], status=status.HTTP_200_OK)
+          return Response(status=status.HTTP_200_OK)
       return Response(status=status.HTTP_404_NOT_FOUND)
     
     if has_access_to_post(post, requester):
@@ -169,12 +170,13 @@ class LikeCommentListLocal(LikeCommentListRemote):
     
     request_host = request.get_host().split(":")[0]
     if comment_author_host is not None and comment_author_host != request_host:
+      LikeComment.objects.create(comment=comment, user=requester)
       if comment_author_host in API_LOOKUP:
         adapter = API_LOOKUP[comment_author_host]
 
         resp = adapter.request_post_author_inbox(comment_author.id, request_data)
         if resp["status_code"] == 200:
-          return Response(resp["body"], status=status.HTTP_200_OK)
+          return Response(status=status.HTTP_200_OK)
       return Response(status=status.HTTP_404_NOT_FOUND)
     
     if has_access_to_post(post, requester):

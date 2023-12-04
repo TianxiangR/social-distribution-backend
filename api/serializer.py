@@ -362,7 +362,7 @@ class PostBriefLocalSerializer(PostBriefSerializer):
     is_liked = serializers.SerializerMethodField()
     like_count = serializers.SerializerMethodField()
     is_my_post = serializers.SerializerMethodField()
-    image_url = serializers.SerializerMethodField()
+    html_url = serializers.SerializerMethodField()
     
     def get_is_liked(self, obj):
         request = self.context.get('request')
@@ -379,10 +379,11 @@ class PostBriefLocalSerializer(PostBriefSerializer):
         user = request.user
         return obj.author.id == user.id
     
-    def get_image_url(self, obj):
+    def get_html_url(self, obj):
         request = self.context.get('request')
         if obj.contentType == "image":
             return f"{request.scheme}://{request.get_host()}/authors/{obj.author.id}/posts/{obj.id}/image"
+        return f"http://localhost:3000/unlisted/{obj.id}"
         
         return None
     
