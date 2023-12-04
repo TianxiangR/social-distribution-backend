@@ -36,7 +36,7 @@ def get_datetime_from_str(s: str) -> datetime:
 class PostListRemote(GenericAPIView):
     authentication_classes = [BasicAuthentication]
     permission_classes = [IsAuthenticated]
-    queryset = Post.objects.filter(visibility="PUBLIC")
+    queryset = Post.objects.filter(visibility="PUBLIC", is_foreign=False)
     serializer_class = PostListSerializer
     
     

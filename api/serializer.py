@@ -325,7 +325,7 @@ class PostBriefSerializer(serializers.Serializer):
         if obj.contentType == "image":
             return "application/base64"
         return obj.contentType
-    
+        
     
     def get_type(self, obj):
         return 'post'
@@ -363,6 +363,11 @@ class PostBriefLocalSerializer(PostBriefSerializer):
     like_count = serializers.SerializerMethodField()
     is_my_post = serializers.SerializerMethodField()
     html_url = serializers.SerializerMethodField()
+    contentType = serializers.SerializerMethodField()
+    
+    def get_contentType(self, obj):
+        return obj.contentType
+    
     
     def get_is_liked(self, obj):
         request = self.context.get('request')
