@@ -383,7 +383,7 @@ class PostBriefLocalSerializer(PostBriefSerializer):
         request = self.context.get('request')
         if obj.contentType == "image":
             return f"{request.scheme}://{request.get_host()}/authors/{obj.author.id}/posts/{obj.id}/image"
-        return f"http://localhost:3000/unlisted/{obj.id}"
+        return f"https://social-distribution-frontend-d762e1fa4ee6.herokuapp.com/unlisted/{obj.id}"
         
         return None
     
