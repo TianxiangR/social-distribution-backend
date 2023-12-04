@@ -318,13 +318,13 @@ class PostBriefSerializer(serializers.Serializer):
     published = serializers.SerializerMethodField()
     visibility = serializers.CharField()
     unlisted = serializers.BooleanField()
-    content =   serializers.SerializerMethodField()
+    content =   serializers.CharField()
+    contentType = serializers.SerializerMethodField()
 
-
-    def get_content(self, obj):
+    def get_contentType(self, obj):
         if obj.contentType == "image":
-            return ""
-        return obj.content
+            return "application/base64"
+        return obj.contentType
     
     
     def get_type(self, obj):
@@ -384,8 +384,6 @@ class PostBriefLocalSerializer(PostBriefSerializer):
         if obj.contentType == "image":
             return f"{request.scheme}://{request.get_host()}/authors/{obj.author.id}/posts/{obj.id}/image"
         return f"https://social-distribution-frontend-d762e1fa4ee6.herokuapp.com/unlisted/{obj.id}"
-        
-        return None
     
 
 @extend_schema_serializer(examples=[
