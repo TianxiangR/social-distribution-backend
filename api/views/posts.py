@@ -154,7 +154,7 @@ class PostListLocal(GenericAPIView):
     
       followers = [followed_relation.follower for followed_relation in author.followed_relations.all()]
       for user in followers:
-        if not user.is_foreign:
+        if not user.is_foreign and instance.visibility == "FRIENDS":
           receiver_obj = user
           try:
             handleInbox(receiver_obj, object)
