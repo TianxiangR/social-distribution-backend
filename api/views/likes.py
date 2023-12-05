@@ -108,9 +108,7 @@ class LikePostListLocal(LikePostListRemote):
       if post_author_host in API_LOOKUP:
         adapter = API_LOOKUP[post_author_host]
         resp = adapter.request_post_author_inbox(post_author.id, request_data)
-        if resp["status_code"] == 200:
-          return Response(status=status.HTTP_200_OK)
-      return Response(status=status.HTTP_404_NOT_FOUND)
+        return Response(status=status.HTTP_200_OK)
     
     if has_access_to_post(post, requester):
       serializer = LikePostSerializer(data={'user': requester.id, 'post': post.id})
@@ -175,9 +173,7 @@ class LikeCommentListLocal(LikeCommentListRemote):
         adapter = API_LOOKUP[comment_author_host]
 
         resp = adapter.request_post_author_inbox(comment_author.id, request_data)
-        if resp["status_code"] == 200:
-          return Response(status=status.HTTP_200_OK)
-      return Response(status=status.HTTP_404_NOT_FOUND)
+        return Response(status=status.HTTP_200_OK)
     
     if has_access_to_post(post, requester):
       serializer = LikeCommentSerializer(data={'user': requester.id, 'comment': comment.id})
