@@ -9,6 +9,6 @@ restLesClientsAdapter = RestLessClientsAdapter()
 API_LOOKUP = {
   iAmTeaPotAdapter.host: iAmTeaPotAdapter,
   ctrlAltDefeatAdapter.host: ctrlAltDefeatAdapter,
-  # restLesClientsAdapter.host: restLesClientsAdapter
+  restLesClientsAdapter.host: restLesClientsAdapter
 }
 
