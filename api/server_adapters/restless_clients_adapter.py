@@ -5,8 +5,8 @@ class IOAdapter(BaseIOAdapter):
     def outputTransformer(self, output):
         output = dict(output)
         for item in output["items"]:
-            item['id'] = item['url']
-        return output
+            if item.get("contentType") is not None and "image" in item["contentType"]:
+                item["contentType"] = "application/base64"
 
 
 class RestLessClientsAdapter(BaseServerAdapter):
@@ -14,3 +14,5 @@ class RestLessClientsAdapter(BaseServerAdapter):
     host = "restlessclients-7b4ebf6b9382.herokuapp.com"
     username_env = "RESTLESS_CLIENTS_USERNAME"
     password_env = "RESTLESS_CLIENTS_PASSWORD"
+    
+    
