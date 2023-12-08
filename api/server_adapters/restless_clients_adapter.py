@@ -6,6 +6,8 @@ class IOAdapter(BaseIOAdapter):
         output = dict(output)
         for item in output["items"]:
             if item.get("contentType") is not None and "image" in item["contentType"]:
+                # This is because RESTLessClients doesn't specify the content type for the image post as application/base64 :(
+                # so we have to do the transformation here, so dumb
                 item["contentType"] = "application/base64"
 
 
@@ -14,5 +16,7 @@ class RestLessClientsAdapter(BaseServerAdapter):
     host = "restlessclients-7b4ebf6b9382.herokuapp.com"
     username_env = "RESTLESS_CLIENTS_USERNAME"
     password_env = "RESTLESS_CLIENTS_PASSWORD"
+    
+    get_author_posts_request_adapter = IOAdapter()
     
     
