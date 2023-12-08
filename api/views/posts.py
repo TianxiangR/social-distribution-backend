@@ -121,6 +121,7 @@ class PostListLocal(GenericAPIView):
         for event in github_activity_data:
           if 'created_at' in event:
               event['published'] = event.pop('created_at')
+        print(github_activity_data)
       else:
         logger.error(f"ERROR [{datetime.now()}] Github API call failed with status code {response.status_code}")
   
