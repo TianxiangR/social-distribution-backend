@@ -11,7 +11,7 @@ from datetime import datetime
 from .inbox import handleInbox
 from urllib3.util import parse_url
 from ..api_lookup import API_LOOKUP
-from ..utils import get_author_id_from_url, get_or_create_user, get_post_id_from_url
+from ..utils import get_author_id_from_url, get_or_create_user, get_post_id_from_url, create_or_update_shared_post_from_request_data
 from drf_spectacular.utils import extend_schema
 import requests
 from logging import getLogger
@@ -19,6 +19,7 @@ from datetime import datetime
 from dateutil.parser import parse as date_parser
 from urllib3.util import parse_url
 import pytz
+import asyncio
 
 logger = getLogger('django')
 utc = pytz.UTC
@@ -28,6 +29,44 @@ def get_datetime_from_str(s: str) -> datetime:
   if dt.tzinfo is None:
     return utc.localize(dt)
   return dt
+
+async def get_posts_from_author(adapter, author_id):
+  try:
+    post_resp = adapter.request_get_author_posts(author_id)
+    if post_resp["status_code"] == 200:
+      for post_data in post_resp["body"]:
+        post_data["id"] = get_post_id_from_url(post_data["id"])
+        post_data["author"]["id"] = get_author_id_from_url(post_data["author"]["id"])
+        post_data["author"]["host"] = parse_url(post_data["author"]["host"]).host
+        post_data["is_foreign"] = True
+        return post_data
+  except Exception as e:
+    logger.error(f"ERROR [{datetime.now()}] {e}")
+    return None
+
+async def get_all_public_posts_from_node(adapter):
+  try:
+    author_resp = adapter.request_get_author_list()
+    futures = []
+    if author_resp["status_code"] == 200:
+      for author in author_resp["body"]:
+        author["id"] = get_author_id_from_url(author["id"])
+        future = asyncio.ensure_future(get_posts_from_author(adapter, author["id"]))
+        futures.append(future)
+    return await asyncio.gather(*futures)
+  except Exception as e:
+    logger.error(f"ERROR [{datetime.now()}] {e}")
+    return None
+
+async def get_all_remote_posts(author):
+  futures = []
+  for adapter in API_LOOKUP.values():
+    try:
+      future = asyncio.ensure_future(get_all_public_posts_from_node(adapter))
+      futures.append(future)
+    except Exception as e:
+      logger.error(f"ERROR [{datetime.now()}] {e}")
+  return await asyncio.gather(*futures)
 
 @extend_schema(
     description="Get a list of public posts of an author from the server",
@@ -83,6 +122,15 @@ class PostListLocal(GenericAPIView):
   
   def get(self, request, **kwargs):
     requester = request.user
+    responses = asyncio.run(get_all_remote_posts(requester))
+    
+    for server_response in responses:
+      if server_response is not None:
+        for post_data in server_response:
+          if post_data is not None:
+            create_or_update_shared_post_from_request_data(post_data, requester)
+    
+    
     posts = self.get_queryset()
     accessible_posts = []
     
@@ -91,23 +139,6 @@ class PostListLocal(GenericAPIView):
         accessible_posts.append(post)
         
     serializer = self.get_serializer(accessible_posts, context = {'request': request})
-    
-    # for adapter in API_LOOKUP.values():
-    #   try:
-    #     author_resp = adapter.request_get_author_list()
-    #     if author_resp["status_code"] == 200:
-    #       for author in author_resp["body"]:
-    #         author["id"] = get_author_id_from_url(author["id"])
-    #         post_resp = adapter.request_get_author_posts(author["id"])
-    #         if post_resp["status_code"] == 200:
-    #           for post_data in post_resp["body"]:
-    #             post_data["id"] = get_post_id_from_url(post_data["id"])
-    #             post_data["author"]["id"] = get_author_id_from_url(post_data["author"]["id"])
-    #             post_data["author"]["host"] = parse_url(post_data["author"]["host"]).host
-    #             post_data["is_foreign"] = True
-    #             serializer.data["items"].append(post_data)
-    #   except Exception as e:
-    #     logger.error(f"ERROR [{datetime.now()}] {e}")
     
     # github activity
     user = User.objects.get(id=requester.id)
