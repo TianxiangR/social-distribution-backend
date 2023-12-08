@@ -7,7 +7,7 @@ class IOAdapter(BaseIOAdapter):
         for item in output["items"]:
             if item.get("contentType") is not None and "image" in item["contentType"]:
                 # This is because RESTLessClients doesn't specify the content type for the image post as application/base64 :(
-                # so we have to do the transformation here, so dumb
+                # so we have to do the transformation here
                 item["contentType"] = "application/base64"
 
 

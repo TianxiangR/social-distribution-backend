@@ -11,6 +11,46 @@ from ..utils import get_author_id_from_url
 from rest_framework.exceptions import ParseError
 from drf_spectacular.utils import extend_schema
 import requests
+import asyncio
+
+async def check_author_exists(adapter, author, request):
+  try:
+    author_id = get_author_id_from_url(author["id"])
+    author["id"] = author_id
+    resp  = adapter.request_get_author_following_check(author_id, request.user.id)
+    if resp["status_code"] == 200:
+      author["is_following"] = True
+    else:
+      author["is_following"] = False
+    return author
+  except ParseError:
+    return None
+
+
+async def get_authors(adapter, request):
+  resp = adapter.request_get_author_list()
+  if resp["status_code"] == 200:
+    resp_data = resp["body"]
+    
+    futures = []
+    for author in resp_data:
+      try:
+        future = asyncio.ensure_future(check_author_exists(adapter, author, request))
+        futures.append(future)
+    
+      except ParseError:
+        print("ParseError", adapter.host)
+        
+    return await asyncio.gather(*futures)
+  
+async def get_all_remote_authors(request):
+  futures = []
+  for adapter in API_LOOKUP.values():
+    future = asyncio.ensure_future(get_authors(adapter, request))
+    futures.append(future)
+  
+  return await asyncio.gather(*futures)
+  
 
 @extend_schema(
     description="Get a list of authors from the server",
@@ -82,26 +122,14 @@ class AuthorListLocal(GenericAPIView):
         users = self.get_queryset().filter(is_server=False, is_superuser=False, is_foreign=False).exclude(id=request.user.id)
         serializer = self.get_serializer(users, context = {'request': request})
         response_data = serializer.data
+        responses = asyncio.run(get_all_remote_authors(request))
         
-        for adapter in API_LOOKUP.values():
-          resp = adapter.request_get_author_list()
-          if resp["status_code"] == 200:
-            resp_data = resp["body"]
-            for author in resp_data:
-              try:
-                author_id = get_author_id_from_url(author["id"])
-                author["id"] = author_id
-                resp  = adapter.request_get_author_following_check(author_id, request.user.id)
-                if resp["status_code"] == 200:
-                  author["is_following"] = True
-                else:
-                  author["is_following"] = False
-                response_data["items"].append(author)
-              except ParseError:
-                print("ParseError", adapter.host)
+        print(responses)
         
+        for resp in responses:
+          response_data["items"] += resp
+          
         return Response(response_data, status=status.HTTP_200_OK)
-      
       
 class Profile(GenericAPIView):
   authentication_classes = [TokenAuthentication]
