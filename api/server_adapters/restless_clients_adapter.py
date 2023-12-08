@@ -4,7 +4,7 @@ from .io_adapters.base_io_adapter import BaseIOAdapter
 class IOAdapter(BaseIOAdapter):
     def outputTransformer(self, output):
         output = dict(output)
-        for item in output["items"]:
+        for item in output:
             if item.get("contentType") is not None and "image" in item["contentType"]:
                 # This is because RESTLessClients doesn't specify the content type for the image post as application/base64 :(
                 # so we have to do the transformation here
