@@ -123,9 +123,7 @@ class AuthorListLocal(GenericAPIView):
         serializer = self.get_serializer(users, context = {'request': request})
         response_data = serializer.data
         responses = asyncio.run(get_all_remote_authors(request))
-        
-        print(responses)
-        
+      
         for resp in responses:
           response_data["items"] += resp
           
