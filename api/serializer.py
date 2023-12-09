@@ -1033,11 +1033,27 @@ class PostBriefListSerializer(serializers.Serializer):
 ])
 class PostListSerializer(PostBriefListSerializer):
     items = serializers.SerializerMethodField()
+    page = serializers.SerializerMethodField()
+    size = serializers.SerializerMethodField()
     
+    def get_page(self, obj):
+        request = self.context.get('request')
+        return request.GET.get('page', 1)
+    
+    def get_size(self, obj):
+        request = self.context.get('request')
+        size = request.GET.get('size', None)
+        if size is not None:
+            return size
     
     def get_items(self, obj):
         request = self.context.get('request')
-        return PostDetailRemoteSerializer(obj, many=True, context={'request': request}).data
+        post_data = PostDetailRemoteSerializer(obj, many=True, context={'request': request}).data
+        if self.get_size(obj) is None:
+            return post_data
+        start_index = (int(self.get_page(obj)) - 1) * int(self.get_size(obj))
+        end_index = start_index + int(self.get_size(obj))
+        return post_data[start_index:end_index]
     
 
 @extend_schema_serializer(examples=[
@@ -1206,18 +1222,31 @@ class CommentListRemoteSerializer(serializers.Serializer):
     def get_type(self, obj):
         return 'comments'
     
-    
-    def get_items(self, obj):
+    def get_page(self, obj):
         request = self.context.get('request')
-        return CommentDetailRemoteSerializer(obj, many=True, context={'request': request}).data
+        return request.GET.get('page', 1)
     
     
     def get_size(self, obj):
-        return len(obj)
+        request = self.context.get('request')
+        size = request.GET.get('size', None)
+        if size is not None:
+            return size
     
     
-    def get_page(self, obj):
-        return 1
+    def get_items(self, obj):
+        request = self.context.get('request')
+        comment_data = CommentDetailRemoteSerializer(obj, many=True, context={'request': request}).data
+        if self.get_size(obj) is None:
+            return comment_data
+        
+        start_index = (int(self.get_page(obj)) - 1) * int(self.get_size(obj))
+        end_index = start_index + int(self.get_size(obj))
+        
+        return comment_data[start_index:end_index]
+    
+    
+
     
     
 class CommentListLocalSerializer(CommentListRemoteSerializer):
