@@ -14,7 +14,6 @@ class CreateUserSerializer(serializers.ModelSerializer):
         user = super().create(validated_data)
         user.set_password(self.initial_data['password'])
         user.save()
-        print(user.is_active)
         user.is_active = True
         return user
     
